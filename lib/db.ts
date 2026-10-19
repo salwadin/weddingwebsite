@@ -10,8 +10,12 @@ import type { AuditEntry, Database } from "./types";
  * It is created from the sample wedding the first time the app runs.
  * Every read/write goes through this module, which is server-only, so nothing
  * here can be bundled into client code. See README → "Moving to Supabase".
+ *
+ * On Vercel (read-only filesystem) the file lives in /tmp, which is temporary:
+ * changes last while an instance is warm, then the sample wedding is rebuilt.
  */
-const FILE = path.join(process.cwd(), "data", "db.json");
+const FILE = process.env.QUBOOL_DATA_FILE
+  || (process.env.VERCEL ? "/tmp/qubool-db.json" : path.join(process.cwd(), "data", "db.json"));
 
 const g = globalThis as unknown as { __qubool?: Database };
 
@@ -27,10 +31,15 @@ function load(): Database {
 }
 
 function persist(db: Database) {
-  fs.mkdirSync(path.dirname(FILE), { recursive: true });
-  const tmp = FILE + ".tmp";
-  fs.writeFileSync(tmp, JSON.stringify(db));
-  fs.renameSync(tmp, FILE);
+  try {
+    fs.mkdirSync(path.dirname(FILE), { recursive: true });
+    const tmp = FILE + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(db));
+    fs.renameSync(tmp, FILE);
+  } catch (err) {
+    // Keep serving from memory if the disk isn't writable.
+    console.warn("[qubool] could not save data file:", (err as Error).message);
+  }
 }
 
 export function db(): Database {

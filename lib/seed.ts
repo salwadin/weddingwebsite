@@ -1,4 +1,4 @@
-import { randomBytes, scryptSync } from "node:crypto";
+import { createHmac, randomBytes, scryptSync } from "node:crypto";
 import type {
   Database, Expense, Guest, Household, Invitation, PublicRegistration, Rsvp, Side, Task,
   Vendor, Wedding, WeddingEvent,
@@ -23,6 +23,15 @@ export function hashPassword(pw: string) {
 
 export function newToken() {
   return randomBytes(24).toString("base64url");
+}
+
+/**
+ * Sample-wedding links are derived from SESSION_SECRET so every server instance
+ * (e.g. multiple Vercel functions) builds the same links. Links issued later are random.
+ */
+function seedToken(householdId: string) {
+  const secret = process.env.SESSION_SECRET || "qubool-dev-secret-change-me";
+  return createHmac("sha256", secret).update(`seed-token:${householdId}`).digest("base64url").slice(0, 32);
 }
 
 // Deterministic PRNG so the sample wedding looks the same after every reset.
@@ -349,7 +358,7 @@ export function buildSeed(): Database {
   registrations.push({ ...dupSrc, id: id("reg"), name: dupSrc.name.toUpperCase(), duplicateOf: dupSrc.id, createdAt: now });
 
   // ---------- tokens ----------
-  const tokens = households.map((h) => ({ token: newToken(), householdId: h.id, weddingId: W, createdAt: now, useCount: 0 }));
+  const tokens = households.map((h) => ({ token: seedToken(h.id), householdId: h.id, weddingId: W, createdAt: now, useCount: 0 }));
 
   // ---------- planning ----------
   const vendor = (category: string, name: string, contact: string, eventIds: string[], status: Vendor["status"], notes?: string): Vendor =>

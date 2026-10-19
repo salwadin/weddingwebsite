@@ -61,6 +61,17 @@ Organizer accounts (password `qubool-demo`) show how permissions work:
 
 ---
 
+## Deploy a demo to Vercel
+
+GitHub Pages can't run this app because it needs a server. Vercel can, and it's free for personal projects.
+
+1. Go to [vercel.com](https://vercel.com), sign in with GitHub, and choose **Add New → Project**.
+2. Import `salwadin/weddingwebsite`, and leave the framework preset as **Next.js**.
+3. Under **Environment Variables**, add `SESSION_SECRET` with a long random value. It signs organizer sessions and determines the sample invitation links.
+4. Click **Deploy**. Every push to `main` redeploys automatically.
+
+**Demo limitation:** on Vercel the data file lives in temporary storage (`/tmp`). RSVPs and edits last while the server is warm, then the sample wedding is rebuilt. If Vercel runs several copies at once, each copy keeps its own changes. That's fine for showing the app. For a real wedding, connect Supabase first (see [Moving to Supabase](#moving-to-supabase)).
+
 ## The sample wedding
 
 | Event | Visibility | RSVP | Guests |
