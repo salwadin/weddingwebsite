@@ -33,17 +33,43 @@ export function money(n: number, currency = "USD") {
 }
 
 export const EVENT_TYPES: { value: EventType; label: string; blurb: string }[] = [
-  { value: "nikkah", label: "Nikkah", blurb: "The Islamic marriage ceremony" },
-  { value: "shaadi", label: "Shaadi", blurb: "Wedding celebration & rukhsati" },
-  { value: "walima", label: "Walima", blurb: "Reception hosted by the groom's family" },
-  { value: "mehndi", label: "Mehndi", blurb: "Henna night" },
+  { value: "nikkah", label: "Nikah", blurb: "The Islamic marriage ceremony" },
+  { value: "katb_kitab", label: "Katb al-Kitab", blurb: "Signing of the marriage contract" },
+  { value: "aqd", label: "Aghd", blurb: "Persian ceremony at the sofreh" },
+  { value: "civil", label: "Civil ceremony", blurb: "Legal registration" },
+  { value: "engagement", label: "Engagement", blurb: "Mangni, khutbah, or nisbat" },
+  { value: "henna", label: "Henna night", blurb: "Laylat al-henna" },
+  { value: "mehndi", label: "Mehndi", blurb: "Henna night with music" },
+  { value: "kina", label: "Kına gecesi", blurb: "Turkish henna night" },
   { value: "dholki", label: "Dholki", blurb: "Music & dholak evening" },
   { value: "mayoun", label: "Mayoun", blurb: "Haldi / ubtan ceremony" },
-  { value: "baraat", label: "Baraat", blurb: "Groom's procession" },
+  { value: "welcome_dinner", label: "Welcome dinner", blurb: "For out-of-town guests" },
   { value: "bridal_shower", label: "Bridal shower", blurb: "" },
+  { value: "baraat", label: "Baraat", blurb: "Groom's procession" },
+  { value: "zaffa", label: "Zaffa", blurb: "Procession with drums & dancing" },
+  { value: "shaadi", label: "Shaadi", blurb: "Wedding celebration & rukhsati" },
+  { value: "aroosi", label: "Aroosi", blurb: "Wedding reception" },
+  { value: "reception", label: "Reception", blurb: "Wedding reception" },
+  { value: "walima", label: "Walima", blurb: "Feast hosted by the groom's family" },
+  { value: "shaash_saar", label: "Shaash saar", blurb: "Somali post-wedding gathering" },
   { value: "family_dinner", label: "Family dinner", blurb: "" },
+  { value: "brunch", label: "Farewell brunch", blurb: "" },
   { value: "custom", label: "Custom event", blurb: "" },
 ];
+
+/** Starting points for onboarding. Every couple can add, remove, or rename events. */
+export const TRADITIONS: { value: string; label: string; events: EventType[] }[] = [
+  { value: "south_asian", label: "South Asian", events: ["mehndi", "nikkah", "shaadi", "walima"] },
+  { value: "arab", label: "Arab", events: ["katb_kitab", "henna", "zaffa", "reception"] },
+  { value: "persian", label: "Persian", events: ["aqd", "aroosi"] },
+  { value: "turkish", label: "Turkish", events: ["engagement", "kina", "nikkah", "reception"] },
+  { value: "west_african", label: "West African", events: ["engagement", "nikkah", "walima", "reception"] },
+  { value: "somali", label: "Somali & East African", events: ["nikkah", "reception", "shaash_saar"] },
+  { value: "blended", label: "Blended / interfaith-family", events: ["nikkah", "civil", "reception"] },
+  { value: "custom", label: "Start from scratch", events: ["nikkah", "reception"] },
+];
+
+export const eventLabel = (t: EventType) => EVENT_TYPES.find((x) => x.value === t)?.label ?? "Event";
 
 export const VISIBILITY: Record<Visibility, { label: string; help: string }> = {
   public: { label: "Public · open invitation", help: "Shown to everyone who visits your website." },

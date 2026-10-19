@@ -1,11 +1,14 @@
 import Link from "next/link";
-import { requireOrg } from "@/lib/dashboard";
+import { allows, requireOrg } from "@/lib/dashboard";
+import { can } from "@/lib/access";
+import { UpgradeGate } from "@/components/dash/upgrade-gate";
 import { importCsv } from "@/lib/actions/dashboard";
 import { Card, PageHeader } from "@/components/ui";
 import { ImportForm } from "@/components/dash/import-form";
 
 export default async function ImportPage() {
   const o = await requireOrg("guests", "edit");
+  if (!allows(o, "csv_import")) return <><PageHeader title="Import guests" /><UpgradeGate feature="csv_import" canManageBilling={can(o.scope, "billing")}>Import hundreds of households at once from a spreadsheet. You can still add households one at a time on any plan.</UpgradeGate></>;
   return (
     <>
       <Link href="/dashboard/guests" className="text-xs text-muted hover:text-ink">← Guest list</Link>

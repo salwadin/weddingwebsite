@@ -1,8 +1,15 @@
-# Qubool: wedding planning for South Asian Muslim weddings
+# Qubool: planning for Muslim & multicultural weddings
 
-**One wedding website, many events, and a personal invitation for every guest.**
+**One wedding. Every celebration. Every guest, their own invitation.**
 
-Qubool plans the Mehndi, Nikkah, Shaadi, Walima, and anything else in one place. Every event has its own guest list, visibility, and RSVP rules. The same website automatically shows each family only the events they're invited to. Uninvited events never appear: there are no locked cards and no "you're not invited" messages, and their data never reaches the browser.
+Qubool plans weddings that span many days and many layers: a Nikah, henna night, reception and Walima; or a katb al-kitab, zaffa and reception; or an aghd and aroosi. Every event has its own guest list, visibility, and RSVP rules. The same website automatically shows each family only the events they're invited to. Uninvited events never appear: there are no locked cards and no "you're not invited" messages, and their data never reaches the browser.
+
+Around that core, Qubool includes:
+
+- **Outfit manager:** every look for every event (couple, parents, bridal party), with designers, pieces, fittings, deadlines, payments, and a color palette shared with guests.
+- **Design studio:** moodboards and drag-and-drop floor plans (stages, prayer rooms, separate sections, tables), with seat counts checked against RSVPs.
+- **Vendor marketplace:** a public directory filtered by tradition and needs (halal certified, female team, alcohol-free, separate sections), free inquiries for couples, and a vendor portal with paid promotion tiers.
+- **Plans:** Essentials (free), Plus, and Signature for couples, with a 14-day trial. Vendors get Basic (free), Featured, and Spotlight.
 
 ---
 
@@ -36,6 +43,7 @@ On the landing page, choose an identity under **Live demo**, or use the floating
 | Nikkah + Shaadi guest | Dr. Sana Malik & Mr. Faisal Malik | Nikkah, Shaadi (with meal choice) |
 | All-events guest | Mr. and Mrs. Tariq Siddiqui & Family | Mehndi (family only), Nikkah, Shaadi, Walima |
 | Wedding administrator | Ayesha (bride) | Full dashboard |
+| Vendor | Noor Light Studios | Vendor portal: listing, inquiries, promotion tier |
 
 Guest modes use the real invitation-link flow (`/i/<token>`). The demo button looks up that household's current token and redirects through it.
 
@@ -49,6 +57,7 @@ Organizer accounts (password `qubool-demo`) show how permissions work:
 | zara@example.com | Event organizer (Mehndi) | Only the Mehndi and its guests |
 | hamza@example.com | Budget manager | Budget and vendors only |
 | planner@example.com | Read-only | Views everything, edits nothing |
+| vendor@example.com | Vendor | The Noor Light Studios portal |
 
 ### Things to try
 
@@ -57,7 +66,11 @@ Organizer accounts (password `qubool-demo`) show how permissions work:
 3. As admin, open **Guest List → Dr. Sana Malik → Issue new link**. The old link immediately falls back to the public view.
 4. As admin, open **Guest List**, filter by *Shaadi, not Walima* or *Walima: pending*, select households, and bulk-invite them to an event.
 5. Open **Invitations → Shaadi**, switch the preview to a specific family (it shows a personalized name and QR code), and click **Download PNG**.
-6. Sign up as a new couple to go through the 8-step onboarding wizard.
+6. Sign up as a new couple and go through onboarding. Pick a tradition (South Asian, Arab, Persian, Turkish, West African, Somali, blended) to preselect events.
+7. Open **Outfits**, switch between *By event* and *By person*, tick off pieces, and move a look to the next status.
+8. Open **Design Studio → Crescent Ballroom floor plan**, drag tables around, and watch the seat count against expected guests. Changes save automatically.
+9. Browse **/marketplace**, filter by *Arab* and *Female team available*, and send an inquiry. Then switch to the **Vendor** demo mode to see it arrive.
+10. As admin, open **Plan & Billing** and switch to Essentials to see which features lock, then switch back.
 
 ---
 
@@ -85,6 +98,23 @@ That's 163 households (477 people) with realistic RSVPs, a seating sample, 12 ve
 
 ---
 
+## Plans and monetization
+
+| | Essentials | Plus | Signature |
+|---|---|---|---|
+| Price | Free | $149 once per wedding | $349 once per wedding |
+| Events / guests | 2 / 150 | 8 / 1,000 | Unlimited |
+| Website, private events, RSVPs, checklist, budget | ✓ | ✓ | ✓ |
+| Browse & message vendors | ✓ | ✓ | ✓ |
+| Invitation designer, collaborators, CSV import, outfits | | ✓ | ✓ |
+| Design studio, custom domain, no Qubool branding | | | ✓ |
+
+New weddings get every Signature feature for 14 days. Limits only block *adding* events or guests, so nothing is ever removed. Features are checked on the server (`lib/plans.ts` → `assertFeature`) as well as in the UI.
+
+Vendors list for free. **Featured** ($49/mo) and **Spotlight** ($149/mo) rank higher in search, add a badge, and appear as "Recommended" inside couples' dashboards (labelled as sponsored).
+
+Plan and tier changes are **simulated** in this demo: nothing is charged. A live version would use Stripe Checkout and set the plan from the payment webhook.
+
 ## Project structure
 
 ```
@@ -99,22 +129,30 @@ app/
     rsvp/                      Household RSVP / public registration / "find my invitation"
     story/, travel/, gallery/, faq/
   login/, signup/, onboarding/ Auth + 8-step setup wizard
+  marketplace/, marketplace/[id]/   Public vendor directory and profiles
+  for-vendors/                 Vendor sign-up and promotion tiers
+  vendor/                      Vendor portal (listing, inquiries, promotion)
+  pricing/                     Couple plans
   dashboard/                   Organizer app
     page.tsx                   Per-event stats, discrepancies, budget, tasks, activity
-    website/  events/  guests/  invitations/  rsvps/  checklist/  budget/  vendors/  settings/
+    website/  events/  guests/  invitations/  rsvps/  outfits/  studio/  checklist/  budget/  vendors/  settings/  billing/
 components/
   ui.tsx                       shadcn-style primitives (Button, Card, Field, Badge…)
   site/                        Wedding-website components (RSVP forms, event cards)
-  dash/                        Dashboard components (guest table, invitation designer)
+  dash/                        Dashboard components (guest table, invitation designer, outfit cards, studio canvas)
+  market/                      Marketplace components
 lib/
   types.ts                     Domain model (mirrors supabase/schema.sql)
   access.ts                    ★ Guest visibility rule + organizer permission matrix
   site.ts                      Builds the per-visitor website payload (sanitized DTOs)
   auth.ts                      Organizer sessions (HMAC-signed), guest tokens, site password
-  dashboard.ts                 requireOrg() gate, RSVP stats, discrepancy checks
+  dashboard.ts                 requireOrg() gate, plan checks, RSVP stats, discrepancy checks
+  plans.ts                     Couple plans, vendor tiers, feature gates, trial logic
+  marketplace.ts               Vendor categories, tags, traditions
+  studio-templates.ts          Floor plan & moodboard templates
   actions/                     Server actions (site, dashboard, auth, onboarding)
   db.ts                        Local JSON persistence (server-only)
-  seed.ts                      Deterministic sample wedding
+  seed.ts, seed-extras.ts      Deterministic sample wedding, outfits, boards, vendors
 supabase/schema.sql            Production Postgres schema + Row Level Security + guest RPCs
 ```
 

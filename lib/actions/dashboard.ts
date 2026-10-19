@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { audit, mutate, resetDb, uid } from "../db";
 import { canEditEvent, canTouchHousehold, type Area } from "../access";
-import { requireOrg, type Org } from "../dashboard";
+import { assertFeature, requireOrg, type Org } from "../dashboard";
+import { PLANS } from "../plans";
 import { hashPassword, newToken, DEMO_WEDDING_ID } from "../seed";
 import type { EventType, Expense, Guest, Role, RsvpMode, Side, Task, ThemeSettings, Vendor, Visibility, WeddingEvent } from "../types";
 import type { FormState } from "./site";
@@ -22,6 +23,19 @@ async function edit(area: Area) {
   return requireOrg(area, "edit");
 }
 
+/** Plan limits on counts. Existing data is never removed; only additions are blocked. */
+function assertRoom(o: Org, kind: "events" | "guests", adding: number) {
+  const w = o.ctx.wedding.id;
+  if (kind === "events") {
+    const max = PLANS[o.plan].maxEvents;
+    if (o.d.events.filter((e) => e.weddingId === w).length + adding > max) throw new Error(`Your plan includes ${max} events. Upgrade under Plan & Billing to add more.`);
+  } else {
+    const max = PLANS[o.plan].maxGuests;
+    const hh = new Set(o.d.households.filter((h) => h.weddingId === w).map((h) => h.id));
+    if (o.d.guests.filter((g) => hh.has(g.householdId)).length + adding > max) throw new Error(`Your plan includes up to ${max} guests. Upgrade under Plan & Billing to add more.`);
+  }
+}
+
 function householdOrThrow(o: Org, id: string) {
   const h = o.d.households.find((x) => x.id === id && x.weddingId === o.ctx.wedding.id);
   if (!h || !canTouchHousehold(o.scope, h, o.d)) throw new Error("Not permitted");
@@ -36,6 +50,7 @@ export async function saveEvent(form: FormData) {
   const existing = id ? o.d.events.find((e) => e.id === id && e.weddingId === o.ctx.wedding.id) : null;
   if (id && (!existing || !canEditEvent(o.scope, existing))) throw new Error("Not permitted");
   if (!id && o.scope.role !== "admin" && !o.scope.side) throw new Error("Not permitted");
+  if (!id) assertRoom(o, "events", 1);
 
   const timeline = str(form, "timeline", 4000).split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
     const m = l.match(/^(\d{1,2}:\d{2})\s*[-–·]?\s*(.+)$/);
@@ -57,6 +72,7 @@ export async function saveEvent(form: FormData) {
     timeline,
     genderSeparated: bool(form, "genderSeparated"), womenOnly: bool(form, "womenOnly"), noPhotography: bool(form, "noPhotography"),
     prayerSpace: bool(form, "prayerSpace"), halal: bool(form, "halal"), budget: num(form, "budget"),
+    palette: str(form, "palette", 200).split(/[,\s]+/).filter((c) => /^#[0-9a-f]{6}$/i.test(c)).slice(0, 8),
   };
   if (o.scope.side && values.hostSide !== o.scope.side && values.hostSide !== "both") values.hostSide = o.scope.side;
   let newId = id;
@@ -111,6 +127,7 @@ export async function createHousehold(form: FormData) {
   if (o.scope.side && side !== o.scope.side && side !== "both") throw new Error("Not permitted");
   const members = parseMembers(str(form, "members", 3000));
   if (!members.length) throw new Error("Add at least one person");
+  assertRoom(o, "guests", members.length);
   const hid = uid("hh");
   const eventIds = form.getAll("events").map(String).filter((id) => o.events.some((e) => e.id === id));
   mutate((d) => {
@@ -288,9 +305,11 @@ export async function bulkInvite(form: FormData) {
  */
 export async function importCsv(_prev: FormState, form: FormData): Promise<FormState> {
   const o = await edit("guests");
+  assertFeature(o, "csv_import");
   const text = str(form, "csv", 2_000_000);
   const rows = parseCsv(text);
   if (rows.length < 2) return { error: "Paste a CSV with a header row and at least one household." };
+  try { assertRoom(o, "guests", rows.length - 1); } catch (e) { return { error: (e as Error).message }; }
   const header = rows[0].map((h) => h.trim().toLowerCase());
   const col = (r: string[], k: string) => (header.indexOf(k) >= 0 ? (r[header.indexOf(k)] ?? "").trim() : "");
   if (!header.includes("members") && !header.includes("household")) return { error: "The header row must include at least 'household' or 'members'." };
@@ -343,6 +362,7 @@ function parseCsv(text: string): string[][] {
 
 export async function saveDesign(form: FormData) {
   const o = await edit("invitations");
+  assertFeature(o, "invitation_designer");
   const eventId = str(form, "eventId");
   if (!o.events.some((e) => e.id === eventId)) throw new Error("Not permitted");
   mutate((d) => {
@@ -576,6 +596,7 @@ export async function saveWebsite(form: FormData) {
 
 export async function inviteCollaborator(form: FormData) {
   const o = await edit("settings");
+  assertFeature(o, "collaborators");
   const email = str(form, "email", 200).toLowerCase();
   const role = str(form, "role") as Role;
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Invalid email");

@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarHeart, CheckSquare, Globe, Home, Mail, PiggyBank, Settings, Store, UserCheck, Users } from "lucide-react";
+import { CalendarHeart, CheckSquare, CreditCard, Globe, Home, LayoutGrid, Mail, PiggyBank, Settings, Shirt, Store, UserCheck, Users } from "lucide-react";
 import { cn } from "@/lib/format";
 
-const ICONS = { dashboard: Home, website: Globe, events: CalendarHeart, guests: Users, invitations: Mail, rsvps: UserCheck, checklist: CheckSquare, budget: PiggyBank, vendors: Store, settings: Settings };
+const ICONS = { dashboard: Home, website: Globe, events: CalendarHeart, guests: Users, invitations: Mail, rsvps: UserCheck, checklist: CheckSquare, budget: PiggyBank, vendors: Store, settings: Settings, outfits: Shirt, studio: LayoutGrid, billing: CreditCard };
 export type NavKey = keyof typeof ICONS;
 
 export function DashNav({ items }: { items: { key: NavKey; href: string; label: string }[] }) {

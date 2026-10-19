@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { organizerContext } from "./auth";
 import { can, scopeEvents, scopeFor, scopeHouseholds, type Area, type Scope } from "./access";
 import { db } from "./db";
-import type { Database, Household, WeddingEvent } from "./types";
+import { effectivePlan, hasFeature, type Feature } from "./plans";
+import type { Database, Household, Plan, WeddingEvent } from "./types";
 
 export interface Org {
   ctx: NonNullable<Awaited<ReturnType<typeof organizerContext>>>;
@@ -11,6 +12,15 @@ export interface Org {
   d: Database;
   events: WeddingEvent[]; // events this organizer may see
   households: Household[]; // households this organizer may see
+  plan: Plan; // effective plan (includes an active trial)
+}
+
+/** Server-side plan check. Pages render <UpgradeGate> when false; actions throw. */
+export function allows(o: Org, f: Feature) {
+  return hasFeature(o.plan, f);
+}
+export function assertFeature(o: Org, f: Feature) {
+  if (!allows(o, f)) throw new Error(`Your plan doesn't include this feature (${f}).`);
 }
 
 /** Gate for every dashboard page and action: signed in, collaborator, permitted for `area`. */
@@ -25,7 +35,7 @@ export async function requireOrg(area: Area = "dashboard", level: "view" | "edit
   const d = db();
   const events = scopeEvents(scope, d.events.filter((e) => e.weddingId === ctx.wedding.id))
     .sort((a, b) => a.date.localeCompare(b.date) || a.sortOrder - b.sortOrder);
-  return { ctx, scope, d, events, households: scopeHouseholds(scope, d, ctx.wedding.id) };
+  return { ctx, scope, d, events, households: scopeHouseholds(scope, d, ctx.wedding.id), plan: effectivePlan(ctx.wedding) };
 }
 
 export interface EventStats {

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight, Info } from "lucide-react";
 import { can } from "@/lib/access";
 import { discrepancies, eventStats, requireOrg } from "@/lib/dashboard";
+import { PLANS, trialDaysLeft } from "@/lib/plans";
 import { longDate, money, time12, VISIBILITY } from "@/lib/format";
 import { Badge, ButtonLink, Card, CardHeader, PageHeader, Progress, Stat } from "@/components/ui";
 
@@ -25,6 +26,12 @@ export default async function Overview({ searchParams }: { searchParams: Promise
 
   return (
     <>
+      {trialDaysLeft(w) > 0 && can(scope, "billing") && (
+        <p className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-gold-soft/50 px-4 py-2.5 text-sm">
+          <span>You&apos;re trying every feature free for {trialDaysLeft(w)} more days. After that you&apos;ll be on {PLANS[w.plan].name}.</span>
+          <Link href="/dashboard/billing" className="font-medium underline">Compare plans</Link>
+        </p>
+      )}
       {welcome && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-3 text-sm text-[#3f5238]">Mubarak! Your wedding is set up. Next: add details to each event, then send personal invitation links from the Guest List.</p>}
       {denied && <p className="mb-4 rounded-xl bg-rose-soft px-4 py-2.5 text-sm text-[#8f3f39]">Your role doesn&apos;t include access to {denied}. Ask a wedding administrator if you need it.</p>}
       <PageHeader

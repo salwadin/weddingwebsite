@@ -2,7 +2,7 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
-import { buildSeed } from "./seed";
+import { buildSeed, DB_VERSION } from "./seed";
 import type { AuditEntry, Database } from "./types";
 
 /**
@@ -21,8 +21,9 @@ const g = globalThis as unknown as { __qubool?: Database };
 
 function load(): Database {
   if (g.__qubool) return g.__qubool;
-  if (fs.existsSync(FILE)) {
-    g.__qubool = JSON.parse(fs.readFileSync(FILE, "utf8")) as Database;
+  const saved = fs.existsSync(FILE) ? (JSON.parse(fs.readFileSync(FILE, "utf8")) as Database) : null;
+  if (saved && saved.version === DB_VERSION) {
+    g.__qubool = saved;
   } else {
     g.__qubool = buildSeed();
     persist(g.__qubool);

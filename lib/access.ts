@@ -41,19 +41,20 @@ export function rsvpEligibility(e: WeddingEvent, household: Household | null) {
  * ===================================================================== */
 export type Area =
   | "dashboard" | "website" | "events" | "guests" | "invitations" | "rsvps"
-  | "checklist" | "budget" | "vendors" | "settings" | "mahr";
+  | "checklist" | "budget" | "vendors" | "settings" | "mahr"
+  | "outfits" | "studio" | "billing";
 
 const V = "view", E = "edit";
 type Level = typeof V | typeof E;
 
 const MATRIX: Record<Role, Partial<Record<Area, Level>>> = {
-  admin: { dashboard: E, website: E, events: E, guests: E, invitations: E, rsvps: E, checklist: E, budget: E, vendors: E, settings: E, mahr: E },
-  bride_organizer: { dashboard: V, website: V, events: E, guests: E, invitations: E, rsvps: E, checklist: E, budget: E, vendors: V },
-  groom_organizer: { dashboard: V, website: V, events: E, guests: E, invitations: E, rsvps: E, checklist: E, budget: E, vendors: V },
-  event_organizer: { dashboard: V, events: E, guests: V, invitations: E, rsvps: V, checklist: E, vendors: V },
+  admin: { dashboard: E, website: E, events: E, guests: E, invitations: E, rsvps: E, checklist: E, budget: E, vendors: E, settings: E, mahr: E, outfits: E, studio: E, billing: E },
+  bride_organizer: { dashboard: V, website: V, events: E, guests: E, invitations: E, rsvps: E, checklist: E, budget: E, vendors: V, outfits: E, studio: E },
+  groom_organizer: { dashboard: V, website: V, events: E, guests: E, invitations: E, rsvps: E, checklist: E, budget: E, vendors: V, outfits: E, studio: E },
+  event_organizer: { dashboard: V, events: E, guests: V, invitations: E, rsvps: V, checklist: E, vendors: V, outfits: E, studio: E },
   guest_manager: { dashboard: V, website: V, events: V, guests: E, invitations: E, rsvps: E, checklist: V },
-  budget_manager: { dashboard: V, events: V, checklist: V, budget: E, vendors: E },
-  viewer: { dashboard: V, website: V, events: V, guests: V, invitations: V, rsvps: V, checklist: V, budget: V, vendors: V },
+  budget_manager: { dashboard: V, events: V, checklist: V, budget: E, vendors: E, outfits: V },
+  viewer: { dashboard: V, website: V, events: V, guests: V, invitations: V, rsvps: V, checklist: V, budget: V, vendors: V, outfits: V, studio: V },
 };
 
 export const ROLE_LABELS: Record<Role, string> = {

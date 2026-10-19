@@ -2,11 +2,12 @@ import Link from "next/link";
 import { cn } from "@/lib/format";
 
 export const DEMO_MODES = [
-  { mode: "public", label: "Public visitor", sub: "No invitation · sees public events only" },
-  { mode: "nikkah", label: "Nikkah-only guest", sub: "Qureshi family" },
-  { mode: "shaadi", label: "Nikkah + Shaadi guest", sub: "Dr. Sana Malik" },
-  { mode: "all", label: "All-events guest", sub: "Tariq Siddiqui's family" },
-  { mode: "admin", label: "Wedding administrator", sub: "Ayesha (bride)" },
+  { mode: "public", label: "Public visitor", sub: "No invitation", sees: "Sees: Nikkah" },
+  { mode: "nikkah", label: "Nikkah-only guest", sub: "Qureshi family", sees: "Sees: Nikkah" },
+  { mode: "shaadi", label: "Nikkah + Shaadi guest", sub: "Dr. Sana Malik", sees: "Sees: Nikkah, Shaadi" },
+  { mode: "all", label: "All-events guest", sub: "Tariq Siddiqui's family", sees: "Sees: all four events" },
+  { mode: "admin", label: "Wedding administrator", sub: "Ayesha (bride)", sees: "Full planning dashboard" },
+  { mode: "vendor", label: "Vendor", sub: "Noor Light Studios", sees: "Listing, inquiries & promotion" },
 ] as const;
 
 /** Floating "test as…" switcher for the demo. Server-rendered; it only shows a label, never data. */
@@ -20,7 +21,7 @@ export function DemoBar({ current }: { current: string }) {
           <span className="text-[#b08d57] group-open:hidden">Switch ▴</span>
           <span className="hidden text-[#b08d57] group-open:inline">Close ▾</span>
         </summary>
-        <div className="grid gap-1 border-t border-[#e7ddcd] p-2 sm:grid-cols-5">
+        <div className="grid gap-1 border-t border-[#e7ddcd] p-2 sm:grid-cols-3 lg:grid-cols-6">
           {DEMO_MODES.map((m) => (
             <Link key={m.mode} href={`/demo/${m.mode}`} prefetch={false} className={cn("rounded-xl px-3 py-2 text-xs hover:bg-[#f4eee3]", current.startsWith(m.label) && "bg-[#f4eee3]")}>
               <div className="font-semibold">{m.label}</div>

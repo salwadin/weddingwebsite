@@ -8,6 +8,7 @@ import type { EventType, RsvpMode, Side, ThemeSettings, Visibility, WeddingEvent
 
 export interface OnboardingInput {
   partner1: string; partner2: string; partner1Family: string; partner2Family: string; role: "bride" | "groom";
+  tradition?: string;
   events: { type: EventType; name: string; date: string; startTime: string; venueName: string; address: string; visibility: Visibility; rsvpMode: RsvpMode; hostSide: Side }[];
   theme: ThemeSettings["id"];
   households: { name: string; members: string[]; side: Side }[];
@@ -45,7 +46,8 @@ export async function createWedding(input: OnboardingInput): Promise<{ error?: s
         verse: { enabled: true, arabic: "وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً", translation: "And among His signs is that He created for you mates from among yourselves, that you may find tranquility in them; and He placed between you affection and mercy.", reference: "Surah Ar-Rum 30:21" },
         urduNames: { partner1: "", partner2: "" }, halalNote: "All food served is halal.", modestyNote: "We kindly ask guests to dress modestly.", prayerNote: "Prayer space will be available.",
       },
-      passwordProtected: false, published: !!input.publish, totalBudget: 50000, currency: "USD", createdAt: now,
+      passwordProtected: false, published: !!input.publish, totalBudget: 50000, currency: "USD",
+      plan: "free", trialEndsAt: new Date(Date.now() + 14 * 864e5).toISOString(), tradition: clean(input.tradition ?? "", 30) || undefined, createdAt: now,
     });
     d.collaborators.push({ id: uid("col"), weddingId: W, userId: user.id, role: "admin", relationship: input.role === "groom" ? "Groom" : "Bride", invitedAt: now });
 

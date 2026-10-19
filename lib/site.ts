@@ -3,6 +3,7 @@ import { cache } from "react";
 import { db } from "./db";
 import { guestHousehold, hasSiteAccess, organizerContext } from "./auth";
 import { visibleEvents } from "./access";
+import { effectivePlan, hasFeature } from "./plans";
 import type { Guest, Household, Rsvp, Wedding, WeddingEvent } from "./types";
 
 /** Wedding fields that are safe to send to any visitor. Never includes mahr, password, budget. */
@@ -26,6 +27,7 @@ export interface SiteData {
   guest: GuestView | null;
   locked: boolean;
   isOrganizer: boolean;
+  showBranding: boolean;
 }
 
 function toPublicWedding(w: Wedding): PublicWedding {
@@ -73,5 +75,5 @@ export const getSite = cache(async (slug: string): Promise<SiteData | null> => {
         .map(({ eventId, guestId, status, meal, updatedAt }) => ({ eventId, guestId, status, meal, updatedAt })),
     };
   }
-  return { wedding: toPublicWedding(w), events, guest, locked, isOrganizer };
+  return { wedding: toPublicWedding(w), events, guest, locked, isOrganizer, showBranding: !hasFeature(effectivePlan(w), "remove_branding") };
 });

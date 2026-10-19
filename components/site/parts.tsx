@@ -67,6 +67,14 @@ export function EventDetail({ e, islamic, rsvpHref, showRsvp, id }: { e: PublicE
             <div className="flex gap-3"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--site-accent)]" /><div><dt className="sr-only">Venue</dt><dd>{e.venueName}<span className="block text-xs text-[var(--site-muted)]">{e.address}</span></dd></div></div>
             {e.dressCode && <div className="flex gap-3"><Shirt className="mt-0.5 h-4 w-4 shrink-0 text-[var(--site-accent)]" /><div><dt className="sr-only">Dress code</dt><dd>{e.dressCode}</dd></div></div>}
           </dl>
+          {e.palette && e.palette.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-[11px] uppercase tracking-[0.24em] text-[var(--site-muted)]">Suggested colors</h4>
+              <div className="mt-2 flex gap-2">
+                {e.palette.map((c) => <span key={c} title={c} className="h-8 w-8 rounded-full border border-[var(--site-line)] shadow-inner" style={{ background: c }} />)}
+              </div>
+            </div>
+          )}
           {notes.length > 0 && (
             <ul className="mt-6 flex flex-wrap gap-2">
               {notes.map((n) => <li key={n} className="rounded-full bg-[var(--site-soft)] px-3 py-1 text-xs">{n}</li>)}

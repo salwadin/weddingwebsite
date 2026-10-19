@@ -46,6 +46,12 @@ export default async function EventEditor({ params, searchParams }: { params: Pr
                 <Field label="Venue"><Input name="venueName" defaultValue={e.venueName} /></Field>
                 <Field label="Address"><Input name="address" defaultValue={e.address} /></Field>
                 <Field label="Dress code" className="sm:col-span-2"><Input name="dressCode" defaultValue={e.dressCode} placeholder="Modest formal attire" /></Field>
+                <Field label="Guest color palette" hint="Hex colors separated by commas, shown to guests next to the dress code." className="sm:col-span-2">
+                  <div className="flex items-center gap-2">
+                    <Input name="palette" defaultValue={(e.palette ?? []).join(", ")} placeholder="#7A1F2B, #B08D57, #1F2A44" />
+                    <span className="flex shrink-0 gap-1">{(e.palette ?? []).map((c) => <span key={c} className="h-6 w-6 rounded-full border border-line" style={{ background: c }} />)}</span>
+                  </div>
+                </Field>
                 <Field label="Description" className="sm:col-span-2"><Textarea name="description" rows={3} defaultValue={e.description} /></Field>
                 <Field label="Hosted by"><Select name="hostSide" defaultValue={e.hostSide}>{Object.entries(SIDES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></Field>
                 <Field label="Event budget (USD)"><Input type="number" name="budget" defaultValue={e.budget || ""} min={0} /></Field>

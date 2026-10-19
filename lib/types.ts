@@ -4,8 +4,20 @@
 export type Side = "bride" | "groom" | "both";
 
 export type EventType =
-  | "nikkah" | "shaadi" | "walima" | "mehndi" | "dholki" | "mayoun"
-  | "baraat" | "bridal_shower" | "family_dinner" | "custom";
+  // Ceremonies
+  | "nikkah" | "aqd" | "katb_kitab" | "civil"
+  // Celebrations & receptions
+  | "shaadi" | "walima" | "reception" | "aroosi" | "zaffa"
+  // Pre-wedding
+  | "engagement" | "henna" | "mehndi" | "kina" | "dholki" | "mayoun" | "baraat" | "bridal_shower" | "welcome_dinner"
+  // Post-wedding
+  | "shaash_saar" | "family_dinner" | "brunch"
+  | "custom";
+
+/** Couple subscription tier. */
+export type Plan = "free" | "plus" | "signature";
+/** Vendor promotion tier in the marketplace. */
+export type ListingTier = "basic" | "featured" | "spotlight";
 
 /**
  * public  — shown to every visitor of the wedding website.
@@ -27,6 +39,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  kind?: "couple" | "vendor";
   passwordHash: string; // scrypt "salt:hash"
   createdAt: string;
 }
@@ -83,6 +96,10 @@ export interface Wedding {
   mahr?: { amount: string; notes: string }; // private planning item, never rendered publicly
   totalBudget: number;
   currency: string;
+  plan: Plan;
+  trialEndsAt?: string; // full access until this date, then `plan` applies
+  tradition?: string; // preset chosen at onboarding, e.g. "south_asian"
+  customDomain?: string;
   createdAt: string;
 }
 
@@ -116,6 +133,7 @@ export interface WeddingEvent {
   halal: boolean;
   budget: number;
   sortOrder: number;
+  palette?: string[]; // suggested guest colors, shown with the dress code
 }
 
 export interface Household {
@@ -201,6 +219,7 @@ export interface Vendor {
   eventIds: string[];
   status: "researching" | "contacted" | "booked" | "paid";
   notes?: string;
+  listingId?: string; // saved from the marketplace
 }
 
 export interface Expense {
@@ -260,7 +279,93 @@ export interface InvitationDesign {
   showQr: boolean;
 }
 
+// ---------------- Outfits ----------------
+export type OutfitStatus = "idea" | "sourcing" | "ordered" | "alterations" | "ready" | "worn";
+
+export interface Outfit {
+  id: string;
+  weddingId: string;
+  eventId?: string;
+  wearer: string; // "Ayesha", "Omar's mother", "Bridesmaids"
+  role: "bride" | "groom" | "family" | "party" | "other";
+  side: Side;
+  title: string; // "Red bridal lehenga"
+  designer: string;
+  vendorId?: string;
+  status: OutfitStatus;
+  colors: string[];
+  image?: string;
+  cost: number;
+  paid: number;
+  dueDate?: string;
+  pieces: { id: string; name: string; done: boolean }[]; // dupatta, jewelry, shoes…
+  fittings: { id: string; date: string; note: string; done: boolean }[];
+  notes?: string;
+}
+
+// ---------------- Design studio ----------------
+export type BoardItemType = "image" | "note" | "swatch" | "text" | "table_round" | "table_rect" | "zone" | "stage";
+
+export interface BoardItem {
+  id: string;
+  type: BoardItemType;
+  x: number; y: number; w: number; h: number;
+  text?: string;
+  color?: string;
+  src?: string;
+  seats?: number;
+}
+
+export interface Board {
+  id: string;
+  weddingId: string;
+  name: string;
+  kind: "moodboard" | "floorplan";
+  eventId?: string;
+  items: BoardItem[];
+  updatedAt: string;
+}
+
+// ---------------- Marketplace ----------------
+export interface Listing {
+  id: string;
+  ownerUserId?: string;
+  name: string;
+  category: string;
+  city: string;
+  serves: string[]; // regions / "Travels nationwide"
+  tagline: string;
+  description: string;
+  images: string[];
+  priceRange: 1 | 2 | 3 | 4;
+  tags: string[]; // halal_certified, female_team, modest_fashion, multilingual…
+  traditions: string[]; // south_asian, arab, persian, turkish, west_african, somali
+  email: string;
+  phone?: string;
+  website?: string;
+  tier: ListingTier;
+  rating: number;
+  reviewCount: number;
+  published: boolean;
+  views: number;
+  createdAt: string;
+}
+
+export interface Inquiry {
+  id: string;
+  listingId: string;
+  weddingId?: string;
+  fromName: string;
+  fromEmail: string;
+  eventDate?: string;
+  guests?: number;
+  message: string;
+  status: "new" | "replied" | "booked" | "closed";
+  createdAt: string;
+}
+
 export interface Database {
+  version: number;
   users: User[];
   weddings: Wedding[];
   collaborators: Collaborator[];
@@ -277,4 +382,8 @@ export interface Database {
   outbox: OutboxMessage[];
   audit: AuditEntry[];
   designs: InvitationDesign[];
+  outfits: Outfit[];
+  boards: Board[];
+  listings: Listing[];
+  inquiries: Inquiry[];
 }

@@ -52,8 +52,8 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
               <Field label="Groom"><Input name="partner2" defaultValue={w.partner2} /></Field>
               <Field label="Bride's family name"><Input name="partner1Family" defaultValue={w.partner1Family} /></Field>
               <Field label="Groom's family name"><Input name="partner2Family" defaultValue={w.partner2Family} /></Field>
-              <Field label="Names in Urdu (bride)"><Input name="urdu1" dir="rtl" defaultValue={w.culture.urduNames.partner1} className="font-urdu" /></Field>
-              <Field label="Names in Urdu (groom)"><Input name="urdu2" dir="rtl" defaultValue={w.culture.urduNames.partner2} className="font-urdu" /></Field>
+              <Field label="Bride's name in another script" hint="Optional: Arabic, Urdu, Farsi…"><Input name="urdu1" dir="rtl" defaultValue={w.culture.urduNames.partner1} className="font-urdu" /></Field>
+              <Field label="Groom's name in another script"><Input name="urdu2" dir="rtl" defaultValue={w.culture.urduNames.partner2} className="font-urdu" /></Field>
               <Field label="Tagline" className="sm:col-span-2"><Input name="tagline" defaultValue={w.tagline} /></Field>
               <Field label="Web address" hint="Your website lives at /w/your-address" className="sm:col-span-2"><Input name="slug" defaultValue={w.slug} /></Field>
               <Field label="Cover photo URL" className="sm:col-span-2"><Input name="heroImage" defaultValue={w.heroImage} /></Field>

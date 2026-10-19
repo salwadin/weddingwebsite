@@ -83,7 +83,7 @@ export default async function SiteLayout({ children, params }: { children: React
       <footer className="mt-24 border-t border-[var(--site-line)] px-6 pb-28 pt-12 text-center">
         <p className="heading text-3xl">{w.partner1} &amp; {w.partner2}</p>
         <Ornament className="my-4" />
-        <p className="text-xs text-[var(--site-muted)]">Made with love on <Link href="/" className="underline underline-offset-2">Qubool</Link></p>
+        {site.showBranding && <p className="text-xs text-[var(--site-muted)]">Made with love on <Link href="/" className="underline underline-offset-2">Qubool</Link></p>}
       </footer>
       <DemoBar current={current} />
     </div>

@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { Mail, Phone } from "lucide-react";
 import { can } from "@/lib/access";
 import { requireOrg } from "@/lib/dashboard";
 import { deleteVendor, saveVendor, setVendorStatus } from "@/lib/actions/dashboard";
 import { money } from "@/lib/format";
-import { Badge, Button, Card, CardHeader, Checkbox, Input, PageHeader, Select } from "@/components/ui";
+import { Badge, Button, ButtonLink, Card, CardHeader, Checkbox, Input, PageHeader, Select } from "@/components/ui";
+import { ListingCard } from "@/components/market/listing-card";
 
 const CATS = ["Venue", "Catering", "Decor", "Photography", "Videography", "Makeup", "Henna", "Florist", "Invitations", "Transportation", "DJ / Music", "Officiant", "Other"];
 const STATUS = { researching: "outline", contacted: "gold", booked: "sage", paid: "ink" } as const;
@@ -15,10 +17,21 @@ export default async function VendorsPage() {
   const vendors = d.vendors.filter((v) => v.weddingId === o.ctx.wedding.id).filter((v) => !o.scope.eventIds || v.eventIds.some((e) => o.scope.eventIds!.includes(e)));
   const spend = (vid: string) => d.expenses.filter((x) => x.vendorId === vid).reduce((n, x) => ({ total: n.total + (x.actual || x.estimated), paid: n.paid + x.paid }), { total: 0, paid: 0 });
   const cats = [...new Set(vendors.map((v) => v.category))].sort((a, b) => CATS.indexOf(a) - CATS.indexOf(b));
+  // Promoted marketplace vendors that match this wedding's traditions and aren't saved yet.
+  const savedIds = new Set(vendors.map((v) => v.listingId));
+  const recommended = d.listings.filter((l) => l.published && l.tier !== "basic" && !savedIds.has(l.id)
+    && (!o.ctx.wedding.tradition || l.traditions.includes(o.ctx.wedding.tradition))).slice(0, 3);
 
   return (
     <>
-      <PageHeader title="Vendors" description={`${vendors.filter((v) => v.status === "booked" || v.status === "paid").length} of ${vendors.length} vendors booked.`} />
+      <PageHeader title="Vendors" description={`${vendors.filter((v) => v.status === "booked" || v.status === "paid").length} of ${vendors.length} vendors booked.`}
+        actions={<ButtonLink href="/marketplace" variant="outline">Find vendors</ButtonLink>} />
+      {recommended.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-3 flex items-baseline justify-between"><h2 className="font-serif text-2xl">Recommended for your wedding</h2><span className="text-xs text-muted">Sponsored</span></div>
+          <div className="grid gap-4 md:grid-cols-3">{recommended.map((l) => <ListingCard key={l.id} l={l} />)}</div>
+        </section>
+      )}
       {cats.map((c) => (
         <section key={c} className="mb-6">
           <h2 className="mb-2 text-xs font-medium uppercase tracking-[0.12em] text-muted">{c}</h2>
@@ -28,7 +41,7 @@ export default async function VendorsPage() {
               return (
                 <Card key={v.id} className="flex flex-col p-5">
                   <div className="flex items-start justify-between gap-2">
-                    <div><h3 className="font-serif text-xl leading-tight">{v.name}</h3><p className="text-xs text-muted">{v.contact}</p></div>
+                    <div><h3 className="font-serif text-xl leading-tight">{v.listingId ? <Link href={`/marketplace/${v.listingId}`} className="hover:underline">{v.name}</Link> : v.name}</h3><p className="text-xs text-muted">{v.contact}{v.listingId && " · From the marketplace"}</p></div>
                     <Badge tone={STATUS[v.status]}>{v.status}</Badge>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">{v.eventIds.map((id) => <Badge key={id} tone="outline">{events.find((e) => e.id === id)?.name ?? ""}</Badge>)}</div>

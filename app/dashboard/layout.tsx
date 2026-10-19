@@ -17,10 +17,13 @@ const ITEMS: { key: NavKey; area: Area; label: string; href: string }[] = [
   { key: "guests", area: "guests", label: "Guest List", href: "/dashboard/guests" },
   { key: "invitations", area: "invitations", label: "Invitations", href: "/dashboard/invitations" },
   { key: "rsvps", area: "rsvps", label: "RSVPs", href: "/dashboard/rsvps" },
+  { key: "outfits", area: "outfits", label: "Outfits", href: "/dashboard/outfits" },
+  { key: "studio", area: "studio", label: "Design Studio", href: "/dashboard/studio" },
   { key: "checklist", area: "checklist", label: "Planning Checklist", href: "/dashboard/checklist" },
   { key: "budget", area: "budget", label: "Budget", href: "/dashboard/budget" },
   { key: "vendors", area: "vendors", label: "Vendors", href: "/dashboard/vendors" },
   { key: "settings", area: "settings", label: "Settings", href: "/dashboard/settings" },
+  { key: "billing", area: "billing", label: "Plan & Billing", href: "/dashboard/billing" },
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -32,12 +35,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
-      <aside className="sticky top-0 z-30 border-b border-line bg-ivory/95 backdrop-blur lg:h-screen lg:border-b-0 lg:border-r lg:px-4 lg:py-6">
+      <aside className="sticky top-0 z-30 border-b border-line bg-ivory/95 backdrop-blur lg:flex lg:h-screen lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-4 lg:py-6">
         <div className="flex items-center justify-between px-4 py-3 lg:px-2 lg:py-0">
           <Link href="/dashboard"><Logo className="text-xl" /></Link>
           <form action={logout} className="lg:hidden"><button className="text-xs text-muted">Sign out</button></form>
         </div>
-        <div className="mx-2 my-5 hidden rounded-2xl border border-line bg-white p-4 lg:block">
+        <div className="mx-2 my-4 hidden shrink-0 rounded-2xl border border-line bg-white p-4 lg:block">
           <p className="font-serif text-xl leading-tight">{w.partner1} &amp; {w.partner2}</p>
           <p className="mt-0.5 text-xs text-muted">{ctx.user.name} · {ctx.collaborator.relationship}</p>
           <Badge tone="gold" className="mt-2">{ROLE_LABELS[ctx.collaborator.role]}</Badge>
@@ -46,7 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </Link>
         </div>
         <DashNav items={items} />
-        <form action={logout} className="absolute bottom-6 left-6 hidden lg:block">
+        <form action={logout} className="mt-auto hidden px-3 pt-6 lg:block">
           <button className="flex items-center gap-2 text-xs text-muted hover:text-ink"><LogOut className="h-3.5 w-3.5" /> Sign out</button>
         </form>
       </aside>

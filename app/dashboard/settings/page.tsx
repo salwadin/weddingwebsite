@@ -1,5 +1,5 @@
 import { ROLE_LABELS, can } from "@/lib/access";
-import { requireOrg } from "@/lib/dashboard";
+import { allows, requireOrg } from "@/lib/dashboard";
 import { inviteCollaborator, resetDemo, saveMahr, updateCollaborator } from "@/lib/actions/dashboard";
 import type { Role } from "@/lib/types";
 import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
@@ -51,14 +51,16 @@ export default async function SettingsPage() {
               );
             })}
           </ul>
-          <form action={inviteCollaborator} className="grid gap-3 border-t border-line p-5 md:grid-cols-2">
+          {!allows(o, "collaborators") ? (
+            <p className="border-t border-line p-5 text-sm text-muted">Inviting family collaborators is part of Plus. <a href="/dashboard/billing" className="text-ink underline">See plans</a></p>
+          ) : <form action={inviteCollaborator} className="grid gap-3 border-t border-line p-5 md:grid-cols-2">
             <Field label="Name"><Input name="name" placeholder="Bilal Siddiqui" /></Field>
             <Field label="Email"><Input name="email" type="email" required /></Field>
             <Field label="Relationship"><Input name="relationship" placeholder="Bride's brother" /></Field>
             <Field label="Role"><Select name="role">{Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></Field>
             <Field group label="Events (for event organizers)" className="md:col-span-2"><div className="flex flex-wrap gap-3 text-sm">{events.map((e) => <label key={e.id} className="flex items-center gap-1.5"><Checkbox name="eventIds" value={e.id} />{e.name}</label>)}</div></Field>
             <div><Button>Send invite</Button></div>
-          </form>
+          </form>}
         </Card>
 
         <div className="grid content-start gap-5">

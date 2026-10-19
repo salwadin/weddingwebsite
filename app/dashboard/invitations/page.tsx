@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { can } from "@/lib/access";
-import { requireOrg } from "@/lib/dashboard";
+import { allows, requireOrg } from "@/lib/dashboard";
+import { UpgradeGate } from "@/components/dash/upgrade-gate";
 import { saveDesign, sendMessages } from "@/lib/actions/dashboard";
 import { cn, islamicDate, longDate, time12 } from "@/lib/format";
 import { Badge, Button, Card, CardHeader, Checkbox, Field, PageHeader, Select, Textarea } from "@/components/ui";
@@ -10,6 +11,7 @@ import { InvitationPreview } from "@/components/dash/invitation-preview";
 export default async function InvitationsPage({ searchParams }: { searchParams: Promise<{ event?: string; saved?: string; sent?: string }> }) {
   const sp = await searchParams;
   const o = await requireOrg("invitations");
+  if (!allows(o, "invitation_designer")) return <><PageHeader title="Invitations" description="Each family's personal invitation link is always available on their page in the Guest List." /><UpgradeGate feature="invitation_designer" canManageBilling={can(o.scope, "billing")}>Design invitations for each event in English, Arabic and a second language, personalized with each family's name and an RSVP QR code.</UpgradeGate></>;
   const { d, events, households } = o;
   const w = o.ctx.wedding;
   const e = events.find((x) => x.id === sp.event) ?? events[0];
@@ -44,7 +46,7 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
       <div className="grid gap-5 xl:grid-cols-[1fr_440px]">
         <div className="grid content-start gap-5">
           <Card>
-            <CardHeader title="Design" description="Supports English, Urdu, and Arabic text." />
+            <CardHeader title="Design" description="English plus Arabic and a second language: Urdu, Farsi, Turkish, Somali, or any other." />
             <form action={saveDesign} className="grid gap-4 p-5">
               <input type="hidden" name="eventId" value={e.id} />
               <fieldset disabled={!canEdit} className="contents">
@@ -58,7 +60,7 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
                 </div>
                 <Field label="Arabic (top)"><Textarea name="arabicText" rows={1} dir="rtl" defaultValue={design.arabicText} className="font-arabic text-lg" /></Field>
                 <Field label="Invitation wording (English)"><Textarea name="englishText" rows={3} defaultValue={design.englishText} /></Field>
-                <Field label="Urdu line"><Textarea name="urduText" rows={1} dir="rtl" defaultValue={design.urduText} className="font-urdu leading-[2.4]" /></Field>
+                <Field label="Second-language line"><Textarea name="urduText" rows={1} dir="rtl" defaultValue={design.urduText} className="font-urdu leading-[2.4]" /></Field>
                 <label className="flex items-center gap-2 text-sm"><Checkbox name="showQr" defaultChecked={design.showQr} /> Include a QR code that links to RSVP</label>
                 {canEdit && <div><Button>Save design</Button></div>}
               </fieldset>

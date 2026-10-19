@@ -12,6 +12,7 @@ export async function login(_prev: FormState, form: FormData): Promise<FormState
   const user = db().users.find((u) => u.email === email);
   if (!user || !verifyPassword(password, user.passwordHash)) return { error: "Email or password is incorrect." };
   await startOrganizerSession(user.id);
+  if (user.kind === "vendor") redirect("/vendor");
   const hasWedding = db().collaborators.some((c) => c.userId === user.id);
   redirect(hasWedding ? "/dashboard" : "/onboarding");
 }

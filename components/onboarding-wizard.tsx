@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Check, Eye, EyeOff, Lock } from "lucide-react";
-import { cn, EVENT_TYPES } from "@/lib/format";
+import { cn, EVENT_TYPES, TRADITIONS } from "@/lib/format";
 import type { OnboardingInput } from "@/lib/actions/onboarding";
 import type { EventType, RsvpMode, Side, Visibility } from "@/lib/types";
 import { Button, Checkbox, Field, Input, Select, Textarea } from "./ui";
@@ -17,6 +17,18 @@ const DEFAULTS: Record<string, { visibility: Visibility; rsvpMode: RsvpMode; hos
   dholki: { visibility: "private", rsvpMode: "optional", hostSide: "bride" },
   mayoun: { visibility: "private", rsvpMode: "optional", hostSide: "bride" },
   baraat: { visibility: "invite", rsvpMode: "required", hostSide: "groom" },
+  katb_kitab: { visibility: "invite", rsvpMode: "required", hostSide: "both" },
+  aqd: { visibility: "invite", rsvpMode: "required", hostSide: "both" },
+  civil: { visibility: "private", rsvpMode: "none", hostSide: "both" },
+  engagement: { visibility: "invite", rsvpMode: "required", hostSide: "bride" },
+  henna: { visibility: "private", rsvpMode: "required", hostSide: "bride" },
+  kina: { visibility: "private", rsvpMode: "required", hostSide: "bride" },
+  zaffa: { visibility: "invite", rsvpMode: "none", hostSide: "both" },
+  aroosi: { visibility: "invite", rsvpMode: "required", hostSide: "both" },
+  reception: { visibility: "invite", rsvpMode: "required", hostSide: "both" },
+  shaash_saar: { visibility: "private", rsvpMode: "optional", hostSide: "bride" },
+  welcome_dinner: { visibility: "invite", rsvpMode: "required", hostSide: "both" },
+  brunch: { visibility: "invite", rsvpMode: "optional", hostSide: "both" },
 };
 
 const THEMES = [
@@ -41,7 +53,8 @@ export function OnboardingWizard({ action, userName }: { action: (i: OnboardingI
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
   const [names, setNames] = useState({ partner1: "", partner2: "", partner1Family: "", partner2Family: "", role: "bride" as "bride" | "groom" });
-  const [types, setTypes] = useState<EventType[]>(["nikkah", "shaadi", "walima"]);
+  const [tradition, setTradition] = useState("south_asian");
+  const [types, setTypes] = useState<EventType[]>(TRADITIONS[0].events);
   const [events, setEvents] = useState<Record<string, Ev>>({});
   const [theme, setTheme] = useState<OnboardingInput["theme"]>("noor");
   const [brideText, setBrideText] = useState("");
@@ -71,7 +84,7 @@ export function OnboardingWizard({ action, userName }: { action: (i: OnboardingI
     const list = types.map(ev).sort((a, b) => a.date.localeCompare(b.date));
     const assignByIndex = Object.fromEntries(list.map((e, i) => [i, asg(e.type)]));
     start(async () => {
-      const r = await action({ ...names, events: list, theme, households, assign: assignByIndex, slug: slug || `${names.partner1}-and-${names.partner2}`, publish });
+      const r = await action({ ...names, tradition, events: list, theme, households, assign: assignByIndex, slug: slug || `${names.partner1}-and-${names.partner2}`, publish });
       if (r?.error) setError(r.error);
     });
   };
@@ -105,7 +118,15 @@ export function OnboardingWizard({ action, userName }: { action: (i: OnboardingI
         {step === 1 && (
           <>
             <h2 className="font-serif text-4xl">Which celebrations are you planning?</h2>
-            <p className="mt-2 text-sm text-muted">Choose as many as you like. Each gets its own guest list and RSVP. You can add more later.</p>
+            <p className="mt-2 text-sm text-muted">Pick a starting point, then add or remove anything. Each event gets its own guest list and RSVP, and you can add more later.</p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {TRADITIONS.map((t) => (
+                <button key={t.value} type="button" onClick={() => { setTradition(t.value); setTypes(t.events); }}
+                  className={cn("rounded-full border px-3.5 py-1.5 text-sm", tradition === t.value ? "border-ink bg-ink text-ivory" : "border-line hover:border-gold")}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {EVENT_TYPES.filter((t) => t.value !== "custom").map((t) => {
                 const on = types.includes(t.value);

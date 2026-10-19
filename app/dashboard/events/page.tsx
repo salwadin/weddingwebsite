@@ -2,16 +2,22 @@ import Link from "next/link";
 import { Eye, EyeOff, Lock } from "lucide-react";
 import { can, canEditEvent } from "@/lib/access";
 import { eventStats, requireOrg } from "@/lib/dashboard";
+import { PLANS } from "@/lib/plans";
 import { longDate, RSVP_MODES, SIDES, time12, VISIBILITY } from "@/lib/format";
 import { Badge, ButtonLink, Card, PageHeader } from "@/components/ui";
 
 export default async function EventsPage() {
   const o = await requireOrg("events");
   const canCreate = can(o.scope, "events", "edit") && !o.scope.eventIds;
+  const max = PLANS[o.plan].maxEvents;
+  const atLimit = o.d.events.filter((e) => e.weddingId === o.ctx.wedding.id).length >= max;
   return (
     <>
       <PageHeader title="Events" description="Each event has its own guest list, visibility, and RSVP rules. Invitation-only and private events are completely hidden from anyone who isn't invited."
-        actions={canCreate && <ButtonLink href="/dashboard/events/new">Add event</ButtonLink>} />
+        actions={canCreate && (atLimit
+          ? <ButtonLink href="/dashboard/billing" variant="outline">Upgrade to add more events</ButtonLink>
+          : <ButtonLink href="/dashboard/events/new">Add event</ButtonLink>)} />
+      {canCreate && atLimit && <p className="mb-4 rounded-xl bg-gold-soft/50 px-4 py-2.5 text-sm">Your {PLANS[o.plan].name} plan includes {max} events. Your existing events stay live; upgrading lets you add more.</p>}
       <div className="grid gap-4">
         {o.events.map((e) => {
           const s = eventStats(o.d, e, o.households);

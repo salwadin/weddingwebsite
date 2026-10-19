@@ -1,4 +1,5 @@
 import { createHmac, randomBytes, scryptSync } from "node:crypto";
+import { buildBoards, buildInquiries, buildListings, buildOutfits, EVENT_PALETTES } from "./seed-extras";
 import type {
   Database, Expense, Guest, Household, Invitation, PublicRegistration, Rsvp, Side, Task,
   Vendor, Wedding, WeddingEvent,
@@ -15,6 +16,9 @@ export const DEMO_HOUSEHOLDS = {
 } as const;
 
 export const DEMO_WEDDING_ID = "wed_ayesha_omar";
+export const DEMO_VENDOR_USER = "usr_vendor_noor";
+/** Bump when the data shape changes; older local data files are rebuilt from the seed. */
+export const DB_VERSION = 2;
 
 export function hashPassword(pw: string) {
   const salt = randomBytes(16).toString("hex");
@@ -66,6 +70,7 @@ export function buildSeed(): Database {
     { id: "usr_zara", email: "zara@example.com", name: "Zara Siddiqui" },
     { id: "usr_hamza", email: "hamza@example.com", name: "Hamza Farooq" },
     { id: "usr_planner", email: "planner@example.com", name: "Rukhsana (Planner)" },
+    { id: DEMO_VENDOR_USER, email: "vendor@example.com", name: "Mahnoor (Noor Light Studios)", kind: "vendor" as const },
   ].map((u) => ({ ...u, passwordHash: hashPassword(DEMO_PASSWORD), createdAt: now }));
 
   const W = DEMO_WEDDING_ID;
@@ -133,6 +138,8 @@ export function buildSeed(): Database {
     mahr: { amount: "To be finalized by both families", notes: "Private. Visible only to administrators." },
     totalBudget: 95000,
     currency: "USD",
+    plan: "signature",
+    tradition: "south_asian",
     createdAt: now,
   };
 
@@ -435,9 +442,19 @@ export function buildSeed(): Database {
     { id: "col_7", userId: "usr_planner", role: "viewer", relationship: "Wedding planner" },
   ].map((c) => ({ ...c, weddingId: W, invitedAt: now })) as Database["collaborators"];
 
+  for (const e of events) e.palette = EVENT_PALETTES[e.id];
+  const listings = buildListings(DEMO_VENDOR_USER);
+  for (const v of vendors) v.listingId = listings.find((l) => l.name === v.name)?.id;
+
   return {
+    version: DB_VERSION,
     users, weddings: [wedding], collaborators, events, households, guests, invitations, rsvps, tokens, registrations,
-    vendors, expenses, tasks, outbox: [], audit: [
+    vendors, expenses, tasks, outbox: [],
+    outfits: buildOutfits(W, (name) => vendors.find((v) => v.name === name)?.id),
+    boards: buildBoards(W),
+    listings,
+    inquiries: buildInquiries(),
+    audit: [
       { id: id("aud"), weddingId: W, at: now, actor: "System", action: "seed", detail: "Sample wedding created" },
     ],
     designs: [
