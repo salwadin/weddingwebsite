@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ivory: #fbf8f2;
+  --color-cream: #f4eee3;
+  --color-sand: #e9dfcf;
+  --color-ink: #2b2620;
+  --color-muted: #7b7166;
+  --color-gold: #b08d57;
+  --color-gold-soft: #e8d9bc;
+  --color-sage: #8a9a82;
+  --color-sage-soft: #e3e8de;
+  --color-rose: #c48b86;
+  --color-rose-soft: #f3e1dd;
+  --color-line: #e7ddcd;
+  --font-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: var(--font-amiri), "Amiri", serif;
+  --font-urdu: var(--font-nastaliq), "Noto Nastaliq Urdu", serif;
+  --font-playfair: var(--font-playfair-v), Georgia, serif;
+  --font-marcellus: var(--font-marcellus-v), Georgia, serif;
+  --animate-rise: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+:root {
+  --bg: var(--color-ivory);
+  color-scheme: light;
+}
+
+body {
+  background: var(--bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- wedding website themes ---------- */
+.site {
+  --site-bg: #fbf8f2; --site-surface: #ffffff; --site-ink: #2b2620; --site-muted: #7b7166;
+  --site-accent: #b08d57; --site-accent-ink: #ffffff; --site-soft: #f4eee3; --site-line: #e7ddcd;
+  background: var(--site-bg); color: var(--site-ink);
+}
+.site[data-theme="gulab"] { --site-bg: #fcf7f5; --site-accent: #b77a74; --site-soft: #f5e5e1; --site-line: #ecd8d3; }
+.site[data-theme="zaitoon"] { --site-bg: #f8f8f3; --site-accent: #6f8466; --site-soft: #e7ebe1; --site-line: #dde2d4; }
+.site[data-theme="mehtab"] {
+  --site-bg: #141a26; --site-surface: #1c2433; --site-ink: #f3ede2; --site-muted: #b0a898;
+  --site-accent: #d2b07a; --site-accent-ink: #141a26; --site-soft: #222c3d; --site-line: #2f3a4f;
+}
+.site .heading { font-family: var(--site-heading, var(--font-serif)); font-weight: 500; letter-spacing: 0.005em; }
+
+.jali-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23b08d57' stroke-opacity='.16' stroke-width='1'%3E%3Cpath d='M28 4 L52 28 L28 52 L4 28 Z'/%3E%3Cpath d='M28 14 L42 28 L28 42 L14 28 Z'/%3E%3Ccircle cx='28' cy='28' r='4'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.arch-mask {
+  border-radius: 999px 999px 18px 18px;
+}
+
+.fade-in { animation: var(--animate-rise); }
+
+@media print { .no-print { display: none !important; } }

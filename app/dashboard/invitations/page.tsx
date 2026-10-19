@@ -1,0 +1,127 @@
+import Link from "next/link";
+import { can } from "@/lib/access";
+import { requireOrg } from "@/lib/dashboard";
+import { saveDesign, sendMessages } from "@/lib/actions/dashboard";
+import { cn, islamicDate, longDate, time12 } from "@/lib/format";
+import { Badge, Button, Card, CardHeader, Checkbox, Field, PageHeader, Select, Textarea } from "@/components/ui";
+import { CopyButton, WhatsAppButton } from "@/components/dash/nav";
+import { InvitationPreview } from "@/components/dash/invitation-preview";
+
+export default async function InvitationsPage({ searchParams }: { searchParams: Promise<{ event?: string; saved?: string; sent?: string }> }) {
+  const sp = await searchParams;
+  const o = await requireOrg("invitations");
+  const { d, events, households } = o;
+  const w = o.ctx.wedding;
+  const e = events.find((x) => x.id === sp.event) ?? events[0];
+  if (!e) return <PageHeader title="Invitations" description="Add an event first." />;
+  const design = d.designs.find((x) => x.eventId === e.id) ?? { template: "arch" as const, englishText: `Together with their families, ${w.partner1} & ${w.partner2} invite you to their ${e.name}`, urduText: "", arabicText: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", showQr: true };
+  const canEdit = can(o.scope, "invitations", "edit");
+  const invited = households.filter((h) => d.invitations.some((i) => i.householdId === h.id && i.eventId === e.id));
+  const tokenFor = (hid: string) => d.tokens.find((t) => t.householdId === hid && !t.revokedAt)?.token;
+  const recipients = [
+    ...(e.visibility === "public" ? [{ name: `${e.name} page`, link: `/w/${w.slug}/events/${e.id}` }] : []),
+    ...invited.slice(0, 40).flatMap((h) => { const t = tokenFor(h.id); return t ? [{ name: h.name, link: `/i/${t}` }] : []; }),
+  ];
+  const unsent = invited.filter((h) => h.deliveryStatus === "not_sent").length;
+  const pendingHH = invited.filter((h) => {
+    const inv = d.invitations.find((i) => i.householdId === h.id && i.eventId === e.id)!;
+    return inv.guestIds.some((g) => !d.rsvps.some((r) => r.guestId === g && r.eventId === e.id));
+  }).length;
+  const outbox = d.outbox.filter((m) => m.weddingId === w.id && (!m.householdId || households.some((h) => h.id === m.householdId))).slice(0, 25);
+  const publicLink = `/w/${w.slug}/events/${e.id}`;
+
+  return (
+    <>
+      <PageHeader title="Invitations" description="Design a digital invitation for each event. Public events get one shareable link. Private events get a personal link per family, and sharing one never unlocks other events." />
+      <div className="mb-5 flex flex-wrap gap-2">
+        {events.map((x) => (
+          <Link key={x.id} href={`/dashboard/invitations?event=${x.id}`} className={cn("rounded-full border px-4 py-1.5 text-sm", x.id === e.id ? "border-ink bg-ink text-ivory" : "border-line bg-white hover:bg-cream")}>{x.name}</Link>
+        ))}
+      </div>
+      {sp.saved && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-2.5 text-sm text-[#3f5238]">Design saved.</p>}
+      {sp.sent && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-2.5 text-sm text-[#3f5238]">{sp.sent} messages queued. See the outbox below. (Delivery is simulated in this demo.)</p>}
+
+      <div className="grid gap-5 xl:grid-cols-[1fr_440px]">
+        <div className="grid content-start gap-5">
+          <Card>
+            <CardHeader title="Design" description="Supports English, Urdu, and Arabic text." />
+            <form action={saveDesign} className="grid gap-4 p-5">
+              <input type="hidden" name="eventId" value={e.id} />
+              <fieldset disabled={!canEdit} className="contents">
+                <div className="grid grid-cols-3 gap-2">
+                  {(["arch", "jali", "minimal"] as const).map((t) => (
+                    <label key={t} className="cursor-pointer rounded-xl border border-line p-3 text-center text-sm capitalize has-[:checked]:border-ink has-[:checked]:bg-cream/60">
+                      <input type="radio" name="template" value={t} defaultChecked={design.template === t} className="sr-only" />
+                      {t === "arch" ? "Mehrab arch" : t === "jali" ? "Jali lattice" : "Modern minimal"}
+                    </label>
+                  ))}
+                </div>
+                <Field label="Arabic (top)"><Textarea name="arabicText" rows={1} dir="rtl" defaultValue={design.arabicText} className="font-arabic text-lg" /></Field>
+                <Field label="Invitation wording (English)"><Textarea name="englishText" rows={3} defaultValue={design.englishText} /></Field>
+                <Field label="Urdu line"><Textarea name="urduText" rows={1} dir="rtl" defaultValue={design.urduText} className="font-urdu leading-[2.4]" /></Field>
+                <label className="flex items-center gap-2 text-sm"><Checkbox name="showQr" defaultChecked={design.showQr} /> Include a QR code that links to RSVP</label>
+                {canEdit && <div><Button>Save design</Button></div>}
+              </fieldset>
+            </form>
+          </Card>
+
+          <Card>
+            <CardHeader title="Send" description={e.visibility === "public" ? "This is an open invitation. Share it anywhere." : `${invited.length} households are invited. Each one receives its own link.`} />
+            <div className="grid gap-4 p-5 text-sm">
+              {e.visibility === "public" && (
+                <div className="flex flex-wrap items-center gap-2 rounded-xl bg-sage-soft/60 p-3">
+                  <code className="flex-1 break-all text-xs">{publicLink}</code>
+                  <CopyButton text={publicLink} />
+                  <WhatsAppButton message={`${e.publicMessage || `You're invited to the ${e.name} of ${w.partner1} & ${w.partner2}`}. ${longDate(e.date)}, ${time12(e.startTime)} at ${e.venueName}. Details: ${publicLink}`} />
+                </div>
+              )}
+              {canEdit && (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    { kind: "invitation", title: "Personal invitations", body: `${unsent} households haven't been sent theirs.`, cta: "Send to unsent" },
+                    { kind: "reminder", title: "RSVP reminder", body: `${pendingHH} households still have pending replies.`, cta: "Remind pending" },
+                    { kind: "save_the_date", title: "Save the date", body: `Announce the date to all ${invited.length} invited households.`, cta: "Send save-the-date" },
+                  ].map((a) => (
+                    <form key={a.kind} action={sendMessages} className="flex flex-col rounded-xl border border-line p-4">
+                      <input type="hidden" name="kind" value={a.kind} /><input type="hidden" name="eventId" value={e.id} />
+                      <p className="font-medium">{a.title}</p>
+                      <p className="mt-1 flex-1 text-xs text-muted">{a.body}</p>
+                      <Select name="channel" className="mt-3 h-8 text-xs"><option value="email">Email</option><option value="whatsapp">WhatsApp</option></Select>
+                      <Button size="sm" variant="outline" className="mt-2">{a.cta}</Button>
+                    </form>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader title="Outbox" description="Messages sent from Qubool. In this demo, nothing actually leaves your computer." />
+            <ul className="divide-y divide-line/70 text-sm">
+              {outbox.length === 0 && <li className="px-5 py-5 text-muted">No messages yet.</li>}
+              {outbox.map((m) => (
+                <li key={m.id} className="px-5 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone={m.channel === "whatsapp" ? "sage" : "neutral"}>{m.channel}</Badge>
+                    <Badge tone="outline">{m.kind.replace(/_/g, " ")}</Badge>
+                    <span className="text-xs text-muted">to {m.to} · {new Date(m.createdAt).toLocaleString()}</span>
+                  </div>
+                  <p className="mt-1 font-medium">{m.subject}</p>
+                  <p className="text-xs text-muted">{m.body}</p>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
+
+        <div className="xl:sticky xl:top-8 xl:self-start">
+          <InvitationPreview
+            template={design.template} englishText={design.englishText} urduText={design.urduText} arabicText={design.arabicText} showQr={design.showQr}
+            eventName={e.name} names={`${w.partner1} & ${w.partner2}`} dateLine={longDate(e.date)}
+            islamicLine={w.culture.islamicDates ? islamicDate(e.date) : ""} timeLine={`${time12(e.startTime)} onwards`} venue={e.venueName} address={e.address}
+            recipients={recipients.length ? recipients : [{ name: "Sample guest", link: `/w/${w.slug}` }]} />
+        </div>
+      </div>
+    </>
+  );
+}
