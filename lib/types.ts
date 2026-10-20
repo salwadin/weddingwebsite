@@ -1,5 +1,5 @@
-// Core domain model. Mirrors supabase/schema.sql one-to-one so the local JSON
-// store can be swapped for Postgres without touching pages or access rules.
+// Core domain model. Mirrors supabase/migrations one-to-one; lib/rows.ts maps
+// between these shapes and database rows.
 
 export type Side = "bride" | "groom" | "both";
 
@@ -40,7 +40,6 @@ export interface User {
   email: string;
   name: string;
   kind?: "couple" | "vendor";
-  passwordHash: string; // scrypt "salt:hash"
   createdAt: string;
 }
 
@@ -91,7 +90,7 @@ export interface Wedding {
   theme: ThemeSettings;
   culture: CultureSettings;
   passwordProtected: boolean;
-  sitePassword?: string;
+  sitePassword?: string; // write-only: set to change the password; stored as a bcrypt hash, never read back
   published: boolean;
   mahr?: { amount: string; notes: string }; // private planning item, never rendered publicly
   totalBudget: number;
@@ -185,7 +184,8 @@ export interface Rsvp {
 }
 
 export interface InviteToken {
-  token: string;
+  id: string;
+  token: string; // derived from id on the server (lib/tokens.ts); only its sha256 is stored
   householdId: string;
   weddingId: string;
   createdAt: string;
@@ -364,9 +364,24 @@ export interface Inquiry {
   createdAt: string;
 }
 
+/** Someone invited by email who hasn't created an account yet. */
+export interface PendingInvite {
+  id: string;
+  weddingId: string;
+  email: string;
+  name?: string;
+  role: Role;
+  relationship: string;
+  createdAt: string;
+}
+
+/**
+ * One organizer's view of their wedding, loaded per request through their own
+ * Supabase session (lib/db.ts), so it only ever holds rows RLS lets them read.
+ */
 export interface Database {
-  version: number;
-  users: User[];
+  users: User[]; // profiles of the wedding's collaborators
+  invites: PendingInvite[];
   weddings: Wedding[];
   collaborators: Collaborator[];
   events: WeddingEvent[];

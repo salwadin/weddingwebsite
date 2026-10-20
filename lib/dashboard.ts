@@ -2,14 +2,16 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { organizerContext } from "./auth";
 import { can, scopeEvents, scopeFor, scopeHouseholds, type Area, type Scope } from "./access";
-import { db } from "./db";
+import { loadWedding } from "./db";
+import { serverClient, type Supabase } from "./supabase/server";
 import { effectivePlan, hasFeature, type Feature } from "./plans";
 import type { Database, Household, Plan, WeddingEvent } from "./types";
 
 export interface Org {
   ctx: NonNullable<Awaited<ReturnType<typeof organizerContext>>>;
   scope: Scope;
-  d: Database;
+  sb: Supabase; // the organizer's own client: every read and write is checked by RLS
+  d: Database; // what RLS let this organizer read (see lib/db.ts)
   events: WeddingEvent[]; // events this organizer may see
   households: Household[]; // households this organizer may see
   plan: Plan; // effective plan (includes an active trial)
@@ -32,10 +34,11 @@ export async function requireOrg(area: Area = "dashboard", level: "view" | "edit
   }
   const scope = scopeFor(ctx.collaborator.role, ctx.collaborator.eventIds);
   if (!can(scope, area, level)) redirect("/dashboard?denied=" + area);
-  const d = db();
+  const sb = await serverClient();
+  const d = await loadWedding(sb, ctx.wedding);
   const events = scopeEvents(scope, d.events.filter((e) => e.weddingId === ctx.wedding.id))
     .sort((a, b) => a.date.localeCompare(b.date) || a.sortOrder - b.sortOrder);
-  return { ctx, scope, d, events, households: scopeHouseholds(scope, d, ctx.wedding.id), plan: effectivePlan(ctx.wedding) };
+  return { ctx: { ...ctx, wedding: d.weddings[0] }, scope, sb, d, events, households: scopeHouseholds(scope, d, ctx.wedding.id), plan: effectivePlan(ctx.wedding) };
 }
 
 export interface EventStats {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Eye, EyeOff, LayoutGrid, Lock, Shirt, Store, Users } from "lucide-react";
 import { ButtonLink, Logo } from "@/components/ui";
 import { DEMO_MODES } from "@/components/demo-bar";
+import { demoEnabled } from "@/lib/supabase/env";
 import { SiteHeader } from "@/components/site-header";
 import { TRADITIONS } from "@/lib/format";
 import { PLANS, PLAN_ORDER } from "@/lib/plans";
@@ -32,7 +33,7 @@ export default function Landing() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <ButtonLink href="/signup" size="lg">Start free <ArrowRight className="h-4 w-4" /></ButtonLink>
-              <ButtonLink href="#demo" size="lg" variant="outline">Try the live demo</ButtonLink>
+              {demoEnabled() && <ButtonLink href="#demo" size="lg" variant="outline">Try the live demo</ButtonLink>}
             </div>
             <p className="mt-4 text-xs text-muted">Every feature free for 14 days. No card required.</p>
           </div>
@@ -75,6 +76,7 @@ export default function Landing() {
         </div>
       </section>
 
+      {demoEnabled() && (
       <section id="demo" className="scroll-mt-6 bg-cream/50 py-20">
         <div className="mx-auto max-w-6xl px-6">
           <div className="text-center">
@@ -98,6 +100,7 @@ export default function Landing() {
           </div>
         </div>
       </section>
+      )}
 
       <section className="mx-auto max-w-6xl px-6 py-20">
         <div className="text-center">

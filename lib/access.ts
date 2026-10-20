@@ -1,5 +1,4 @@
 import "server-only";
-import { db } from "./db";
 import type { Database, Household, Role, Side, WeddingEvent } from "./types";
 
 /* =====================================================================
@@ -8,33 +7,14 @@ import type { Database, Household, Role, Side, WeddingEvent } from "./types";
  * A visitor sees an event only if:
  *   (a) the event is public, or
  *   (b) their household holds an invitation to that event.
- * Everything rendered on the wedding website flows through this function
- * on the server. Hidden events are never serialized into HTML, RSC payloads,
- * metadata, or API responses, so there is nothing to "unhide" client-side.
+ * This is enforced in the database, by the guest_site() function
+ * (supabase/migrations/…_app.sql), which is the only way the wedding website
+ * reads data: anonymous visitors have no table access at all. Hidden events
+ * are never serialized into HTML, RSC payloads, metadata, or API responses,
+ * so there is nothing to "unhide" client-side. RSVP eligibility is checked
+ * the same way by guest_submit_rsvp() and public_register().
+ * tests/privacy.spec.ts covers this end to end.
  * ===================================================================== */
-export function visibleEvents(weddingId: string, household: Household | null): WeddingEvent[] {
-  const d = db();
-  const invited = household
-    ? new Set(d.invitations.filter((i) => i.householdId === household.id).map((i) => i.eventId))
-    : new Set<string>();
-  return d.events
-    .filter((e) => e.weddingId === weddingId && (e.visibility === "public" || invited.has(e.id)))
-    .sort((a, b) => a.date.localeCompare(b.date) || a.sortOrder - b.sortOrder);
-}
-
-/** Lookup that behaves identically for "doesn't exist" and "not allowed" (no existence oracle). */
-export function findVisibleEvent(weddingId: string, eventId: string, household: Household | null) {
-  return visibleEvents(weddingId, household).find((e) => e.id === eventId) ?? null;
-}
-
-/** Can this household RSVP to this event? Visibility and RSVP eligibility are separate checks. */
-export function rsvpEligibility(e: WeddingEvent, household: Household | null) {
-  if (e.rsvpMode === "none") return { kind: "none" as const };
-  const inv = household && db().invitations.find((i) => i.householdId === household.id && i.eventId === e.id);
-  if (inv) return { kind: "household" as const, invitation: inv };
-  if (e.visibility === "public") return { kind: "public" as const };
-  return { kind: "none" as const };
-}
 
 /* =====================================================================
  * ORGANIZER PERMISSIONS

@@ -1,7 +1,9 @@
 import { ROLE_LABELS, can } from "@/lib/access";
 import { allows, requireOrg } from "@/lib/dashboard";
-import { inviteCollaborator, resetDemo, saveMahr, updateCollaborator } from "@/lib/actions/dashboard";
+import { cancelInvite, inviteCollaborator, resetDemo, saveMahr, updateCollaborator } from "@/lib/actions/dashboard";
 import type { Role } from "@/lib/types";
+import { DEMO_WEDDING_ID } from "@/lib/seed";
+import { demoEnabled } from "@/lib/supabase/env";
 import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { ConfirmButton } from "@/components/dash/nav";
 
@@ -51,6 +53,19 @@ export default async function SettingsPage() {
               );
             })}
           </ul>
+          {d.invites.length > 0 && (
+            <ul className="divide-y divide-line/70 border-t border-line">
+              {d.invites.map((inv) => (
+                <li key={inv.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                  <div className="min-w-48 flex-1">
+                    <p className="font-medium">{inv.name || inv.email} <Badge tone="outline">invited</Badge></p>
+                    <p className="text-xs text-muted">{inv.relationship ? `${inv.relationship} · ` : ""}{inv.email} · joins as {ROLE_LABELS[inv.role]} once they create an account</p>
+                  </div>
+                  <form action={cancelInvite}><input type="hidden" name="id" value={inv.id} /><button className="text-xs text-muted hover:text-[#9b4d47]">Cancel</button></form>
+                </li>
+              ))}
+            </ul>
+          )}
           {!allows(o, "collaborators") ? (
             <p className="border-t border-line p-5 text-sm text-muted">Inviting family collaborators is part of Plus. <a href="/dashboard/billing" className="text-ink underline">See plans</a></p>
           ) : <form action={inviteCollaborator} className="grid gap-3 border-t border-line p-5 md:grid-cols-2">
@@ -80,7 +95,7 @@ export default async function SettingsPage() {
               </form>
             </Card>
           )}
-          {w.id === "wed_ayesha_omar" && (
+          {demoEnabled() && w.id === DEMO_WEDDING_ID && (
             <Card>
               <CardHeader title="Demo data" />
               <form action={resetDemo} className="p-5">

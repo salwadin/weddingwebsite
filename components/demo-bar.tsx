@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/format";
+import { demoEnabled } from "@/lib/supabase/env";
 
 export const DEMO_MODES = [
   { mode: "public", label: "Public visitor", sub: "No invitation", sees: "Sees: Nikkah" },
@@ -10,8 +11,9 @@ export const DEMO_MODES = [
   { mode: "vendor", label: "Vendor", sub: "Noor Light Studios", sees: "Listing, inquiries & promotion" },
 ] as const;
 
-/** Floating "test as…" switcher for the demo. Server-rendered; it only shows a label, never data. */
+/** Floating "test as…" switcher for the demo (QUBOOL_DEMO=on). Server-rendered; it only shows a label, never data. */
 export function DemoBar({ current }: { current: string }) {
+  if (!demoEnabled()) return null;
   return (
     <div className="no-print fixed inset-x-0 bottom-3 z-50 flex justify-center px-3">
       <details className="group max-w-full rounded-2xl border border-[#e7ddcd] bg-white/95 text-[#2b2620] shadow-[0_10px_40px_-12px_rgba(43,38,32,0.35)] backdrop-blur">

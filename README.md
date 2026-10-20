@@ -15,22 +15,37 @@ Around that core, Qubool includes:
 
 ## Run it locally
 
-Requirements: Node.js 20+ (built and tested on Node 26).
+Requirements: Node.js 20+ (built and tested on Node 26), the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started), and a Docker runtime for it ([Docker Desktop](https://www.docker.com/products/docker-desktop/), [OrbStack](https://orbstack.dev) or `brew install colima docker && colima start`).
 
 ```bash
 npm install
+supabase start          # local Postgres, Auth, REST API and a test inbox; applies supabase/migrations
+cp .env.example .env.local
+```
+
+Fill in `.env.local` from `supabase status`: **API URL** → `NEXT_PUBLIC_SUPABASE_URL`, **anon key** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`, **service_role key** → `SUPABASE_SERVICE_ROLE_KEY`. Then load the sample wedding and start the app:
+
+```bash
+npm run seed            # Ayesha & Omar's wedding, the demo accounts and the marketplace
 npm run dev
 ```
 
-Open http://localhost:3000. On first run, the sample wedding for **Ayesha & Omar** is generated into `data/db.json`.
+Open http://localhost:3000. `QUBOOL_DEMO=on` (already in `.env.example`) turns on the demo switcher and the demo accounts on the sign-in page.
 
-To start over with fresh sample data, stop the server, then run:
+- **Emails** (sign-up confirmation, password reset) don't leave your machine: open the local inbox at http://127.0.0.1:54324.
+- **Supabase Studio** (tables, auth users, SQL editor) is at http://127.0.0.1:54323.
+- **Start over:** `npm run seed` replaces the demo wedding; `npm run db:reset` rebuilds the whole database from the migrations and re-seeds. You can also use **Dashboard → Settings → Reset demo data**.
+
+### Tests
+
+The Playwright suite checks the privacy rules end to end against the local Supabase: what each kind of visitor receives from the server, 404s for guessed event URLs, revoked links, organizer scoping and RLS, plus the main dashboard write paths. It re-seeds the demo wedding before running.
 
 ```bash
-npm run seed
+npx playwright install chromium   # once
+npm test                          # starts `npm run dev` if it isn't running
 ```
 
-You can also use **Dashboard → Settings → Reset demo data**.
+`CI=1 npm test` runs against a production build instead (`npm run build` first).
 
 ### Test modes
 
@@ -45,7 +60,7 @@ On the landing page, choose an identity under **Live demo**, or use the floating
 | Wedding administrator | Ayesha (bride) | Full dashboard |
 | Vendor | Noor Light Studios | Vendor portal: listing, inquiries, promotion tier |
 
-Guest modes use the real invitation-link flow (`/i/<token>`). The demo button looks up that household's current token and redirects through it.
+Guest modes use the real invitation-link flow (`/i/<token>`). The demo button looks up that household's current token and redirects through it. Organizer and vendor modes sign in to the seeded Supabase Auth accounts.
 
 Organizer accounts (password `qubool-demo`) show how permissions work:
 
@@ -61,12 +76,12 @@ Organizer accounts (password `qubool-demo`) show how permissions work:
 
 ### Things to try
 
-1. As the **public visitor**, open `/w/ayesha-and-omar/events/evt_shaadi`. You get the same 404 as a made-up id.
+1. As the **all-events guest**, open the Shaadi from the website and copy its URL. Switch to the **public visitor** and open it: you get the same 404 as a made-up id.
 2. As the **Nikkah + Shaadi guest**, RSVP: one attending with a meal, one declining. Then, as admin, find the response under **RSVPs → Shaadi** and in the household's history.
 3. As admin, open **Guest List → Dr. Sana Malik → Issue new link**. The old link immediately falls back to the public view.
 4. As admin, open **Guest List**, filter by *Shaadi, not Walima* or *Walima: pending*, select households, and bulk-invite them to an event.
 5. Open **Invitations → Shaadi**, switch the preview to a specific family (it shows a personalized name and QR code), and click **Download PNG**.
-6. Sign up as a new couple and go through onboarding. Pick a tradition (South Asian, Arab, Persian, Turkish, West African, Somali, blended) to preselect events.
+6. Sign up as a new couple (the confirmation email is in the local inbox) and go through onboarding. Pick a tradition (South Asian, Arab, Persian, Turkish, West African, Somali, blended) to preselect events.
 7. Open **Outfits**, switch between *By event* and *By person*, tick off pieces, and move a look to the next status.
 8. Open **Design Studio → Crescent Ballroom floor plan**, drag tables around, and watch the seat count against expected guests. Changes save automatically.
 9. Browse **/marketplace**, filter by *Arab* and *Female team available*, and send an inquiry. Then switch to the **Vendor** demo mode to see it arrive.
@@ -74,16 +89,14 @@ Organizer accounts (password `qubool-demo`) show how permissions work:
 
 ---
 
-## Deploy a demo to Vercel
+## Deploy to Vercel
 
-GitHub Pages can't run this app because it needs a server. Vercel can, and it's free for personal projects.
+GitHub Pages can't run this app because it needs a server. Vercel can, and it's free for personal projects. You'll need a hosted Supabase project first (see [Moving to Supabase](#moving-to-supabase)).
 
 1. Go to [vercel.com](https://vercel.com), sign in with GitHub, and choose **Add New → Project**.
 2. Import `salwadin/weddingwebsite`, and leave the framework preset as **Next.js**.
-3. Under **Environment Variables**, add `SESSION_SECRET` with a long random value. It signs organizer sessions and determines the sample invitation links.
+3. Under **Environment Variables**, add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL` (your Vercel URL) and `INVITE_TOKEN_SECRET` (a long random value). Add `QUBOOL_DEMO=on` only for a demo deployment.
 4. Click **Deploy**. Every push to `main` redeploys automatically.
-
-**Demo limitation:** on Vercel the data file lives in temporary storage (`/tmp`). RSVPs and edits last while the server is warm, then the sample wedding is rebuilt. If Vercel runs several copies at once, each copy keeps its own changes. That's fine for showing the app. For a real wedding, connect Supabase first (see [Moving to Supabase](#moving-to-supabase)).
 
 ## The sample wedding
 
@@ -94,7 +107,7 @@ GitHub Pages can't run this app because it needs a server. Vercel can, and it's 
 | Shaadi, The Crescent Ballroom | Invitation only | Required, with meal choice | **300** |
 | Walima, Magnolia Estate | Invitation only | Required, with meal choice | **250**, a different list from the Shaadi |
 
-That's 163 households (477 people) with realistic RSVPs, a seating sample, 12 vendors, 16 expenses split by family, 21 tasks, 7 collaborators, and a public registration that is a deliberate duplicate.
+That's 163 households (477 people) with realistic RSVPs, a seating sample, 12 vendors, 16 expenses split by family, 21 tasks, 7 collaborators, and a public registration that is a deliberate duplicate. `lib/seed.ts` builds it with readable ids (`evt_shaadi`), which `npm run seed` turns into stable uuids, so links and tests survive a re-seed.
 
 ---
 
@@ -113,15 +126,16 @@ New weddings get every Signature feature for 14 days. Limits only block *adding*
 
 Vendors list for free. **Featured** ($49/mo) and **Spotlight** ($149/mo) rank higher in search, add a badge, and appear as "Recommended" inside couples' dashboards (labelled as sponsored).
 
-Plan and tier changes are **simulated** in this demo: nothing is charged. A live version would use Stripe Checkout and set the plan from the payment webhook.
+Plan and tier changes are **simulated** when `QUBOOL_DEMO=on`: nothing is charged. Without demo mode they're disabled for now. Organizers and vendors can't write `plan`, `trial_ends_at` or `tier` themselves (column-level grants), so the live version will set them from a Stripe webhook with the service role.
 
 ## Project structure
 
 ```
 app/
   page.tsx                     Landing page + demo launcher
-  demo/[mode]/route.ts         One-click test identities (disable with QUBOOL_DEMO=off)
+  demo/[mode]/route.ts         One-click test identities (only with QUBOOL_DEMO=on)
   i/[token]/route.ts           Personal invitation link → httpOnly cookie → clean redirect
+  auth/confirm/route.ts        Landing page for sign-up confirmation and password-reset emails
   w/[slug]/                    The wedding website (server-rendered, per-visitor)
     layout.tsx                 Theme, nav (only non-empty sections), password gate
     page.tsx                   Home: hero, countdown, verse, the visitor's events
@@ -129,6 +143,7 @@ app/
     rsvp/                      Household RSVP / public registration / "find my invitation"
     story/, travel/, gallery/, faq/
   login/, signup/, onboarding/ Auth + 8-step setup wizard
+  forgot-password/, reset-password/
   marketplace/, marketplace/[id]/   Public vendor directory and profiles
   for-vendors/                 Vendor sign-up and promotion tiers
   vendor/                      Vendor portal (listing, inquiries, promotion)
@@ -142,50 +157,66 @@ components/
   dash/                        Dashboard components (guest table, invitation designer, outfit cards, studio canvas)
   market/                      Marketplace components
 lib/
-  types.ts                     Domain model (mirrors supabase/schema.sql)
-  access.ts                    ★ Guest visibility rule + organizer permission matrix
-  site.ts                      Builds the per-visitor website payload (sanitized DTOs)
-  auth.ts                      Organizer sessions (HMAC-signed), guest tokens, site password
+  types.ts                     Domain model (mirrors supabase/migrations)
+  access.ts                    ★ Organizer permission matrix (the guest rule lives in guest_site())
+  site.ts                      The per-visitor website payload, from the guest_site() RPC
+  auth.ts                      Supabase Auth user + organizer context, guest token cookie, site password cookie
+  db.ts                        Loads an organizer's wedding through their own Supabase session; writes changes back
+  rows.ts                      Domain type ↔ database row mapping
+  tokens.ts                    Invitation links: derived from the token id with a secret, stored as sha256
+  supabase/                    Server, anon and service-role clients; env settings
   dashboard.ts                 requireOrg() gate, plan checks, RSVP stats, discrepancy checks
   plans.ts                     Couple plans, vendor tiers, feature gates, trial logic
   marketplace.ts               Vendor categories, tags, traditions
   studio-templates.ts          Floor plan & moodboard templates
   actions/                     Server actions (site, dashboard, auth, onboarding)
-  db.ts                        Local JSON persistence (server-only)
   seed.ts, seed-extras.ts      Deterministic sample wedding, outfits, boards, vendors
-supabase/schema.sql            Production Postgres schema + Row Level Security + guest RPCs
+  seed-load.ts                 Loads the sample into Supabase (npm run seed, demo reset, tests)
+proxy.ts                       Refreshes the Supabase Auth session cookie before rendering
+supabase/
+  migrations/                  Schema, Row Level Security, guest + organizer RPCs (applied by supabase start / db reset)
+  templates/                   Auth email templates (confirmation, password reset)
+  config.toml                  Local Supabase settings (email confirmation on, 8-character passwords)
+scripts/seed.mts               npm run seed
+tests/                         Playwright: privacy rules and dashboard write paths
 ```
 
 ## How privacy is enforced
 
-The rule lives in one function, `visibleEvents()` in `lib/access.ts`:
+The rule lives in the database, in the `guest_site()` function (`supabase/migrations/…_app.sql`):
 
 > A visitor sees an event only if it is **public**, or their household holds an **invitation** to it.
 
-- **Server-side only.** Website pages are React Server Components. `getSite()` calls `visibleEvents()` and passes only sanitized DTOs to client components. Hidden events are never serialized into HTML, the RSC payload, `<head>` metadata, or the date range in the hero (computed from visible events only). All data modules import `server-only`.
+- **Guests have no table access.** The `anon` role can't read or write any table (`permission denied`). The wedding website reaches data only through SECURITY DEFINER functions: `guest_site(slug, token, site_key)` returns the visible events and the household's own members, invitations and RSVPs; `guest_submit_rsvp`, `public_register`, `resolve_invitation` and `site_unlock` do the rest. Each one applies the rule itself, so even someone calling the API directly with the public anon key gets nothing more than the website shows.
+- **Server-side only.** Website pages are React Server Components. `getSite()` calls `guest_site()` and passes its sanitized result to client components. Hidden events are never serialized into HTML, the RSC payload, `<head>` metadata, or the date range in the hero (computed from visible events only). All data modules import `server-only`.
 - **No existence oracle.** `/w/<slug>/events/<id>` returns an identical 404 for "doesn't exist" and "not invited".
-- **Revocable tokens.** `/i/<token>` (24 random bytes) is validated on every request against a non-revoked token row, so revoking takes effect immediately. The token moves into an httpOnly cookie and the URL is cleaned. Issuing a new link revokes the old one. Use counts and last-used times are tracked.
-- **Visibility and RSVP are separate checks.** `rsvpEligibility()` decides whether someone may respond. Server actions re-derive the household from the cookie and accept answers only for (event, guest) pairs in that household's invitation, before the deadline, with a meal from the allowed list.
-- **Sharing a public link grants nothing else.** Public event links carry no token.
-- **Organizer scoping.** `requireOrg(area, level)` guards every dashboard page and action, using a role matrix plus side and event scope. Out-of-scope households 404. Mahr is admin-only and never rendered publicly.
-- **Auditing.** RSVPs, organizer overrides, invitation changes, and link revocations all go to the audit log.
+- **Revocable tokens, stored as hashes.** The database keeps only `sha256(token)`. The token itself is derived from the token row's id with `INVITE_TOKEN_SECRET` (`lib/tokens.ts`), so organizers can still copy or re-send a family's link, but a leaked database opens nothing. Every request re-checks that the token isn't revoked, so revoking takes effect immediately and the visitor falls back to the public view. The token moves into an httpOnly cookie and the URL is cleaned. Use counts and last-used times are tracked.
+- **Visibility and RSVP are separate checks.** `guest_submit_rsvp()` takes the household from the token, never the form, and accepts answers only for (event, guest) pairs in that household's invitation, before the deadline, with a meal from the allowed list.
+- **Site passwords** are stored as bcrypt hashes. Entering the right one gives the browser a key derived from that hash (`site_unlock()`), which `guest_site()` checks. Changing the password invalidates old keys.
+- **Organizers go through Row Level Security.** Each dashboard request loads the wedding with the signed-in organizer's own Supabase session (`lib/db.ts`), so Postgres decides which rows arrive: a bride-side organizer never receives groom-side households, an event organizer only their events and those guests, and only administrators can read the Mahr (`wedding_private`). Writes go back through the same session and are checked by the same policies. On top of that, `requireOrg(area, level)` applies the role matrix in `lib/access.ts` to every page and action, and out-of-scope households 404.
+- **Server-only privileges are narrow.** The service-role key is used only for the seed, the demo switcher, demo billing, and "find my invitation" (matching a contact means reading households, and nothing it reads is returned).
+- **Auditing.** RSVPs, organizer overrides, invitation changes, and link revocations all go to the append-only audit log.
 - **Guest-PII protection.** "Find my invitation" always gives the same reply and sends the link only to the contact on file (no enumeration).
 
 ## Database design
 
-The same model is used locally (`lib/types.ts`) and in Postgres (`supabase/schema.sql`):
+The same model is used in TypeScript (`lib/types.ts`) and in Postgres (`supabase/migrations/`):
 
 ```
-users ─┬─< wedding_collaborators >── weddings ──< events ──< invitation_designs
-       │        (role, event_ids)        │           │
-       │                                 │           ├──< event_invitations >── households ──< guests
-       │                                 │           │       (guest_ids[])           │
-       │                                 │           ├──< rsvp_responses (per guest per event)
-       │                                 │           └──< public_registrations (open events)
-       │                                 ├──< invitation_tokens (sha256, revoked_at) ─┘
-       │                                 ├──< vendors, expenses (responsibility: bride|groom|both), budgets, tasks
-       │                                 ├── wedding_private (mahr: admin-only RLS)
-       │                                 └──< outbox, audit_log
+auth.users ── profiles
+   │
+   ├─< wedding_collaborators >── weddings ──< events ──< invitation_designs
+   │        (role, event_ids)        │           │
+   │                                 │           ├──< event_invitations >── households ──< guests
+   │                                 │           │       (guest_ids[])           │
+   │                                 │           ├──< rsvp_responses (per guest per event)
+   │                                 │           └──< public_registrations (open events)
+   │                                 ├──< invitation_tokens (sha256, revoked_at) ─┘
+   │                                 ├──< vendors, expenses (responsibility: bride|groom|both), budgets, tasks
+   │                                 ├── wedding_private (mahr: admin-only RLS)
+   │                                 ├──< outfits, boards, collaborator_invites
+   │                                 └──< outbox, audit_log
+   └─< listings ──< inquiries (vendor marketplace)
 ```
 
 Key choices:
@@ -195,13 +226,19 @@ Key choices:
 
 ## Moving to Supabase
 
-The app was designed so you can swap the storage layer:
+Qubool runs on Supabase: Postgres with Row Level Security for data, Supabase Auth for organizer and vendor accounts (email + password, verified email, password reset). Locally that's `supabase start` (see [Run it locally](#run-it-locally)). To go live on a hosted project:
 
-1. Create a Supabase project and run `supabase/schema.sql`.
-2. Replace `lib/db.ts` with Supabase queries. Organizer pages use the user's session client, so RLS applies.
-3. Wedding-website pages call the `guest_site(slug, token)` RPC, and RSVPs call `guest_submit_rsvp(token, responses)`. The `anon` role has **no** table access. Guests can only reach data through these SECURITY DEFINER functions, which apply the same visibility rule inside Postgres.
-4. Replace `lib/auth.ts` organizer sessions with Supabase Auth, and store invitation tokens as `sha256` hashes, as in the schema.
-5. Connect the outbox to an email provider (for example Resend) and the WhatsApp Business API.
+1. Create a project at [supabase.com](https://supabase.com), then link and push the schema:
+   ```bash
+   supabase link --project-ref <your-project-ref>
+   supabase db push
+   ```
+2. In **Authentication → URL Configuration**, set the Site URL to your domain and add `https://<your-domain>/**` to the redirect URLs.
+3. In **Authentication → Emails**, paste the templates from `supabase/templates/` (they link to `/auth/confirm`), keep **Confirm email** on, and set up custom SMTP (for example Resend) so emails come from your domain.
+4. Set the environment variables listed in [Deploy to Vercel](#deploy-to-vercel). Generate a fresh `INVITE_TOKEN_SECRET`; keep it stable, because it derives every invitation link.
+5. Leave `QUBOOL_DEMO` unset in production, and only run `npm run seed` against a demo project.
+
+Still to do before a public launch: Stripe Checkout + webhook for plans and vendor tiers, real email/WhatsApp delivery from the outbox (Resend), rate limiting on the guest RPCs at the edge, and more targeted queries in `lib/db.ts` (each dashboard page currently loads the whole wedding the organizer may see, which is fine at a few thousand guests).
 
 ## Phases
 

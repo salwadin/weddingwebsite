@@ -58,7 +58,7 @@ export async function saveOutfit(form: FormData) {
   };
   const newPieces = str(form, "addPieces", 1000).split(/\n|,/).map((s) => s.trim()).filter(Boolean).slice(0, 20);
   let outId = id;
-  mutate((d) => {
+  await mutate(o, (d) => {
     if (id) {
       const x = outfitOrThrow(o, id);
       const target = d.outfits.find((y) => y.id === x.id)!;
@@ -79,14 +79,14 @@ export async function setOutfitStatus(form: FormData) {
   const x = outfitOrThrow(o, str(form, "id"));
   const status = str(form, "status") as OutfitStatus;
   if (!STATUSES.includes(status)) return;
-  mutate((d) => { d.outfits.find((y) => y.id === x.id)!.status = status; });
+  await mutate(o, (d) => { d.outfits.find((y) => y.id === x.id)!.status = status; });
   done(o);
 }
 
 export async function togglePiece(form: FormData) {
   const o = await editor();
   const x = outfitOrThrow(o, str(form, "id"));
-  mutate((d) => {
+  await mutate(o, (d) => {
     const p = d.outfits.find((y) => y.id === x.id)!.pieces.find((p) => p.id === str(form, "pieceId"));
     if (p) p.done = !p.done;
   });
@@ -96,7 +96,7 @@ export async function togglePiece(form: FormData) {
 export async function removePiece(form: FormData) {
   const o = await editor();
   const x = outfitOrThrow(o, str(form, "id"));
-  mutate((d) => {
+  await mutate(o, (d) => {
     const t = d.outfits.find((y) => y.id === x.id)!;
     t.pieces = t.pieces.filter((p) => p.id !== str(form, "pieceId"));
   });
@@ -108,7 +108,7 @@ export async function addFitting(form: FormData) {
   const x = outfitOrThrow(o, str(form, "id"));
   const date = str(form, "date", 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-  mutate((d) => {
+  await mutate(o, (d) => {
     const t = d.outfits.find((y) => y.id === x.id)!;
     t.fittings.push({ id: uid("ft"), date, note: str(form, "note", 200), done: false });
     t.fittings.sort((a, b) => a.date.localeCompare(b.date));
@@ -119,7 +119,7 @@ export async function addFitting(form: FormData) {
 export async function toggleFitting(form: FormData) {
   const o = await editor();
   const x = outfitOrThrow(o, str(form, "id"));
-  mutate((d) => {
+  await mutate(o, (d) => {
     const f = d.outfits.find((y) => y.id === x.id)!.fittings.find((f) => f.id === str(form, "fittingId"));
     if (f) f.done = !f.done;
   });
@@ -129,7 +129,7 @@ export async function toggleFitting(form: FormData) {
 export async function deleteOutfit(form: FormData) {
   const o = await editor();
   const x = outfitOrThrow(o, str(form, "id"));
-  mutate((d) => {
+  await mutate(o, (d) => {
     d.outfits = d.outfits.filter((y) => y.id !== x.id);
     audit(d, o.ctx.wedding.id, o.ctx.user.name, "outfit_delete", `${x.wearer}: ${x.title}`);
   });

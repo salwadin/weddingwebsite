@@ -114,7 +114,7 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
             <div className="grid gap-4 p-5">
               <label className="flex items-center gap-2 text-sm"><Checkbox name="published" defaultChecked={w.published} /> Website is published</label>
               <label className="flex items-center gap-2 text-sm"><Checkbox name="passwordProtected" defaultChecked={w.passwordProtected} /> Require a password for the public website</label>
-              <Field label="Website password" hint="Guests with a personal invitation link skip the password."><Input name="sitePassword" defaultValue={w.sitePassword ?? ""} placeholder="e.g. chai2027" /></Field>
+              <Field label="Website password" hint="Stored encrypted, so it can't be shown again. Guests with a personal invitation link skip the password."><Input name="sitePassword" type="password" autoComplete="new-password" placeholder={w.passwordProtected ? "Leave blank to keep the current password" : "e.g. chai2027"} /></Field>
               <p className="text-xs text-muted">Invitation-only and family events are always hidden from anyone without an invitation, whether or not a password is set.</p>
             </div>
           </Card>

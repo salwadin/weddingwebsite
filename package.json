@@ -6,10 +6,15 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "seed": "node --experimental-strip-types scripts/reset-db.ts",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset && npm run seed",
+    "seed": "tsx --env-file-if-exists=.env.local scripts/seed.mts",
+    "test": "playwright test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.540.0",
     "next": "16.0.11",
@@ -20,12 +25,14 @@
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/node": "^22",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4.1.12",
+    "tsx": "^4.23.15",
     "typescript": "^5.9"
   }
 }

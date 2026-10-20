@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Check, Globe, MapPin, Phone, Star } from "lucide-react";
-import { db } from "@/lib/db";
 import { currentUser, organizerContext } from "@/lib/auth";
+import { listingById } from "@/lib/listings";
+import { fromRow } from "@/lib/rows";
+import { anonClient, serverClient } from "@/lib/supabase/server";
 import { can, scopeFor } from "@/lib/access";
 import { recordView, saveToMyVendors, sendInquiry } from "@/lib/actions/marketplace";
 import { price, TRADITION_LABELS, VENDOR_TAGS } from "@/lib/marketplace";
@@ -12,14 +14,9 @@ import { SiteHeader } from "@/components/site-header";
 import { InquiryForm } from "@/components/market/inquiry-form";
 import { ListingCard } from "@/components/market/listing-card";
 
+// Owners can preview their unpublished listing (RLS: published or owner_user_id = auth.uid()).
 async function load(id: string) {
-  const l = db().listings.find((x) => x.id === id);
-  if (!l) return null;
-  if (!l.published) {
-    const u = await currentUser();
-    if (u?.id !== l.ownerUserId) return null; // owners can preview their unpublished listing
-  }
-  return l;
+  return listingById((await currentUser()) ? await serverClient() : anonClient(), id);
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -34,9 +31,12 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
   await recordView(l.id);
   const org = await organizerContext();
   const canSave = !!org && can(scopeFor(org.collaborator.role, org.collaborator.eventIds), "vendors", "edit");
-  const saved = !!org && db().vendors.some((v) => v.weddingId === org.wedding.id && v.listingId === l.id);
-  const firstEvent = org ? db().events.filter((e) => e.weddingId === org.wedding.id).sort((a, b) => a.date.localeCompare(b.date))[0] : undefined;
-  const similar = db().listings.filter((x) => x.published && x.id !== l.id && x.category === l.category).slice(0, 3);
+  const sb = org ? await serverClient() : null;
+  const saved = !!sb && !!(await sb.from("vendors").select("id").eq("wedding_id", org!.wedding.id).eq("listing_id", l.id).limit(1)).data?.length;
+  const { data: first } = sb ? await sb.from("events").select("date").eq("wedding_id", org!.wedding.id).order("date").limit(1).maybeSingle() : { data: null };
+  const firstEvent = first ? { date: first.date as string } : undefined;
+  const { data: sim } = await anonClient().from("listings").select("*").eq("published", true).eq("category", l.category).neq("id", l.id).limit(3);
+  const similar = (sim ?? []).map((r) => fromRow("listings", r));
   const [hero, ...rest] = l.images;
 
   return (

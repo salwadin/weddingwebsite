@@ -2,11 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { audit, mutate, resetDb, uid } from "../db";
+import { audit, mutate, newInviteToken, uid } from "../db";
 import { canEditEvent, canTouchHousehold, type Area } from "../access";
 import { assertFeature, requireOrg, type Org } from "../dashboard";
 import { PLANS } from "../plans";
-import { hashPassword, newToken, DEMO_WEDDING_ID } from "../seed";
+import { DEMO_WEDDING_ID } from "../seed";
+import { loadDemoSeed } from "../seed-load";
+import { demoEnabled } from "../supabase/env";
+import { adminClient } from "../supabase/server";
 import type { EventType, Expense, Guest, Role, RsvpMode, Side, Task, ThemeSettings, Vendor, Visibility, WeddingEvent } from "../types";
 import type { FormState } from "./site";
 
@@ -76,7 +79,7 @@ export async function saveEvent(form: FormData) {
   };
   if (o.scope.side && values.hostSide !== o.scope.side && values.hostSide !== "both") values.hostSide = o.scope.side;
   let newId = id;
-  mutate((d) => {
+  await mutate(o, (d) => {
     if (existing) {
       const e = d.events.find((x) => x.id === id)!;
       const visChanged = e.visibility !== values.visibility;
@@ -97,7 +100,7 @@ export async function deleteEvent(form: FormData) {
   const id = str(form, "id");
   const e = o.d.events.find((x) => x.id === id && x.weddingId === o.ctx.wedding.id);
   if (!e || !canEditEvent(o.scope, e) || o.scope.role !== "admin") throw new Error("Not permitted");
-  mutate((d) => {
+  await mutate(o, (d) => {
     d.events = d.events.filter((x) => x.id !== id);
     d.invitations = d.invitations.filter((x) => x.eventId !== id);
     d.rsvps = d.rsvps.filter((x) => x.eventId !== id);
@@ -130,7 +133,7 @@ export async function createHousehold(form: FormData) {
   assertRoom(o, "guests", members.length);
   const hid = uid("hh");
   const eventIds = form.getAll("events").map(String).filter((id) => o.events.some((e) => e.id === id));
-  mutate((d) => {
+  await mutate(o, (d) => {
     d.households.push({
       id: hid, weddingId: o.ctx.wedding.id, name: str(form, "name", 120) || `${members[0].firstName} ${members[0].lastName}`,
       side, relationship: str(form, "relationship", 120), tags: form.getAll("tags").map(String),
@@ -140,7 +143,7 @@ export async function createHousehold(form: FormData) {
     const gs: Guest[] = members.map((m) => ({ ...m, id: uid("g"), householdId: hid }));
     d.guests.push(...gs);
     for (const eid of eventIds) d.invitations.push({ id: uid("inv"), householdId: hid, eventId: eid, guestIds: gs.map((g) => g.id), createdAt: new Date().toISOString() });
-    d.tokens.push({ token: newToken(), householdId: hid, weddingId: o.ctx.wedding.id, createdAt: new Date().toISOString(), useCount: 0 });
+    d.tokens.push(newInviteToken(hid, o.ctx.wedding.id));
     audit(d, o.ctx.wedding.id, o.ctx.user.name, "household_create", `${str(form, "name") || members[0].firstName} (${gs.length})`);
   });
   refresh(o);
@@ -151,7 +154,7 @@ export async function updateHousehold(form: FormData) {
   const o = await edit("guests");
   const h = householdOrThrow(o, str(form, "id"));
   const side = (str(form, "side") || h.side) as Side;
-  mutate((d) => {
+  await mutate(o, (d) => {
     const x = d.households.find((y) => y.id === h.id)!;
     Object.assign(x, {
       name: str(form, "name", 120) || x.name, side: o.scope.side ? x.side : side, relationship: str(form, "relationship", 120),
@@ -179,7 +182,7 @@ export async function removeGuest(form: FormData) {
   const o = await edit("guests");
   const h = householdOrThrow(o, str(form, "householdId"));
   const gid = str(form, "guestId");
-  mutate((d) => {
+  await mutate(o, (d) => {
     d.guests = d.guests.filter((g) => !(g.id === gid && g.householdId === h.id));
     for (const i of d.invitations) if (i.householdId === h.id) i.guestIds = i.guestIds.filter((x) => x !== gid);
     d.rsvps = d.rsvps.filter((r) => r.guestId !== gid);
@@ -192,7 +195,7 @@ export async function removeGuest(form: FormData) {
 export async function deleteHousehold(form: FormData) {
   const o = await edit("guests");
   const h = householdOrThrow(o, str(form, "id"));
-  mutate((d) => {
+  await mutate(o, (d) => {
     d.households = d.households.filter((x) => x.id !== h.id);
     d.guests = d.guests.filter((x) => x.householdId !== h.id);
     d.invitations = d.invitations.filter((x) => x.householdId !== h.id);
@@ -209,7 +212,7 @@ export async function saveInvitations(form: FormData) {
   const o = await edit("invitations");
   const h = householdOrThrow(o, str(form, "householdId"));
   const members = o.d.guests.filter((g) => g.householdId === h.id);
-  mutate((d) => {
+  await mutate(o, (d) => {
     const changes: string[] = [];
     for (const e of o.events) {
       if (!canEditEvent(o.scope, e) && o.scope.role !== "guest_manager" && !o.scope.side) continue;
@@ -233,7 +236,7 @@ export async function setRsvp(form: FormData) {
   const status = str(form, "status") as "attending" | "declined" | "pending";
   const inv = o.d.invitations.find((i) => i.householdId === h.id && i.eventId === eventId);
   if (!inv?.guestIds.includes(guestId)) throw new Error("Not invited");
-  mutate((d) => {
+  await mutate(o, (d) => {
     const r = d.rsvps.find((x) => x.eventId === eventId && x.guestId === guestId);
     const meal = str(form, "meal", 80) || r?.meal;
     if (status === "pending") d.rsvps = d.rsvps.filter((x) => x !== r);
@@ -250,10 +253,10 @@ export async function setRsvp(form: FormData) {
 export async function regenerateToken(form: FormData) {
   const o = await edit("invitations");
   const h = householdOrThrow(o, str(form, "householdId"));
-  mutate((d) => {
+  await mutate(o, (d) => {
     const now = new Date().toISOString();
     for (const t of d.tokens) if (t.householdId === h.id && !t.revokedAt) t.revokedAt = now;
-    d.tokens.push({ token: newToken(), householdId: h.id, weddingId: o.ctx.wedding.id, createdAt: now, useCount: 0 });
+    d.tokens.push(newInviteToken(h.id, o.ctx.wedding.id));
     audit(d, o.ctx.wedding.id, o.ctx.user.name, "link_regenerate", `${h.name}: old link revoked, new link issued`);
   });
   refresh(o);
@@ -263,7 +266,7 @@ export async function regenerateToken(form: FormData) {
 export async function revokeToken(form: FormData) {
   const o = await edit("invitations");
   const h = householdOrThrow(o, str(form, "householdId"));
-  mutate((d) => {
+  await mutate(o, (d) => {
     for (const t of d.tokens) if (t.householdId === h.id && !t.revokedAt) t.revokedAt = new Date().toISOString();
     audit(d, o.ctx.wedding.id, o.ctx.user.name, "link_revoke", `${h.name}: access revoked`);
   });
@@ -280,7 +283,7 @@ export async function bulkInvite(form: FormData) {
   const ids = str(form, "householdIds", 200000).split(",").filter(Boolean);
   const allowed = new Set(o.households.map((h) => h.id));
   let n = 0;
-  mutate((d) => {
+  await mutate(o, (d) => {
     for (const hid of ids) {
       if (!allowed.has(hid)) continue;
       const existing = d.invitations.find((i) => i.householdId === hid && i.eventId === eventId);
@@ -314,7 +317,7 @@ export async function importCsv(_prev: FormState, form: FormData): Promise<FormS
   const col = (r: string[], k: string) => (header.indexOf(k) >= 0 ? (r[header.indexOf(k)] ?? "").trim() : "");
   if (!header.includes("members") && !header.includes("household")) return { error: "The header row must include at least 'household' or 'members'." };
   let households = 0, people = 0, skipped = 0;
-  mutate((d) => {
+  await mutate(o, (d) => {
     for (const r of rows.slice(1)) {
       if (!r.some((c) => c.trim())) continue;
       const members = parseMembers(col(r, "members") || col(r, "household"));
@@ -335,7 +338,7 @@ export async function importCsv(_prev: FormState, form: FormData): Promise<FormS
         const e = o.events.find((x) => x.name.toLowerCase() === name || x.type === name);
         if (e) d.invitations.push({ id: uid("inv"), householdId: hid, eventId: e.id, guestIds: gs.map((g) => g.id), createdAt: new Date().toISOString() });
       }
-      d.tokens.push({ token: newToken(), householdId: hid, weddingId: o.ctx.wedding.id, createdAt: new Date().toISOString(), useCount: 0 });
+      d.tokens.push(newInviteToken(hid, o.ctx.wedding.id));
       households++; people += gs.length;
     }
     audit(d, o.ctx.wedding.id, o.ctx.user.name, "csv_import", `${households} households, ${people} guests (${skipped} skipped)`);
@@ -365,7 +368,7 @@ export async function saveDesign(form: FormData) {
   assertFeature(o, "invitation_designer");
   const eventId = str(form, "eventId");
   if (!o.events.some((e) => e.id === eventId)) throw new Error("Not permitted");
-  mutate((d) => {
+  await mutate(o, (d) => {
     let des = d.designs.find((x) => x.eventId === eventId && x.weddingId === o.ctx.wedding.id);
     if (!des) { des = { id: uid("des"), weddingId: o.ctx.wedding.id, eventId, template: "arch", englishText: "", urduText: "", arabicText: "", showQr: true }; d.designs.push(des); }
     Object.assign(des, {
@@ -397,7 +400,7 @@ export async function sendMessages(form: FormData) {
     });
   }
   targets = targets.filter((h) => (channel === "email" ? h.email : h.phone));
-  mutate((d) => {
+  await mutate(o, (d) => {
     for (const h of targets) {
       const t = d.tokens.find((x) => x.householdId === h.id && !x.revokedAt);
       if (!t) continue;
@@ -425,7 +428,7 @@ export async function setRegistrationStatus(form: FormData) {
   const status = str(form, "status") as "confirmed" | "waitlist" | "cancelled";
   const reg = o.d.registrations.find((r) => r.id === id);
   if (!reg || !o.events.some((e) => e.id === reg.eventId)) throw new Error("Not permitted");
-  mutate((d) => {
+  await mutate(o, (d) => {
     const r = d.registrations.find((x) => x.id === id)!;
     r.status = status;
     audit(d, o.ctx.wedding.id, o.ctx.user.name, "registration_status", `${r.name} → ${status}`);
@@ -446,14 +449,14 @@ export async function addTask(form: FormData) {
     dueDate: str(form, "dueDate", 10) || undefined, done: false, side: (o.scope.side ?? (str(form, "side") || "both")) as Side,
   };
   if (!t.title) return;
-  mutate((d) => { d.tasks.push(t); audit(d, o.ctx.wedding.id, o.ctx.user.name, "task_add", t.title); });
+  await mutate(o, (d) => { d.tasks.push(t); audit(d, o.ctx.wedding.id, o.ctx.user.name, "task_add", t.title); });
   refresh(o);
 }
 
 export async function toggleTask(form: FormData) {
   const o = await edit("checklist");
   const id = str(form, "id");
-  mutate((d) => {
+  await mutate(o, (d) => {
     const t = d.tasks.find((x) => x.id === id && x.weddingId === o.ctx.wedding.id);
     if (!t || (o.scope.eventIds && !o.scope.eventIds.includes(t.eventId ?? ""))) return;
     t.done = !t.done;
@@ -464,7 +467,7 @@ export async function toggleTask(form: FormData) {
 export async function deleteTask(form: FormData) {
   const o = await edit("checklist");
   const id = str(form, "id");
-  mutate((d) => { d.tasks = d.tasks.filter((x) => !(x.id === id && x.weddingId === o.ctx.wedding.id && (!o.scope.eventIds || o.scope.eventIds.includes(x.eventId ?? "")))); });
+  await mutate(o, (d) => { d.tasks = d.tasks.filter((x) => !(x.id === id && x.weddingId === o.ctx.wedding.id && (!o.scope.eventIds || o.scope.eventIds.includes(x.eventId ?? "")))); });
   refresh(o);
 }
 
@@ -479,7 +482,7 @@ export async function addSuggestedTasks(form: FormData) {
     mehndi: ["Book henna artist", "Dholki song practice", "Mehndi favors & bangles", "Yellow/green decor", "Dance rehearsals"],
   };
   const list = SUGGESTED[e.type] ?? ["Book venue", "Plan menu", "Send invitations", "Confirm timeline"];
-  mutate((d) => {
+  await mutate(o, (d) => {
     for (const title of list) if (!d.tasks.some((t) => t.eventId === e.id && t.title === title))
       d.tasks.push({ id: uid("tsk"), weddingId: o.ctx.wedding.id, eventId: e.id, title, assignee: "", done: false, side: e.hostSide });
   });
@@ -491,7 +494,7 @@ export async function addSuggestedTasks(form: FormData) {
 export async function setTotalBudget(form: FormData) {
   const o = await edit("budget");
   if (o.scope.side) throw new Error("Only administrators and budget managers can change the overall budget");
-  mutate((d) => { d.weddings.find((w) => w.id === o.ctx.wedding.id)!.totalBudget = Math.max(0, num(form, "total")); });
+  await mutate(o, (d) => { d.weddings.find((w) => w.id === o.ctx.wedding.id)!.totalBudget = Math.max(0, num(form, "total")); });
   refresh(o);
 }
 
@@ -504,7 +507,7 @@ export async function saveExpense(form: FormData) {
     eventId: str(form, "eventId") || undefined, vendorId: str(form, "vendorId") || undefined,
     estimated: num(form, "estimated"), actual: num(form, "actual"), paid: num(form, "paid"), responsibility, dueDate: str(form, "dueDate", 10) || undefined,
   };
-  mutate((d) => {
+  await mutate(o, (d) => {
     const ex = id && d.expenses.find((x) => x.id === id && x.weddingId === o.ctx.wedding.id);
     if (ex) {
       if (o.scope.side && ex.responsibility !== o.scope.side) return;
@@ -518,7 +521,7 @@ export async function saveExpense(form: FormData) {
 export async function deleteExpense(form: FormData) {
   const o = await edit("budget");
   const id = str(form, "id");
-  mutate((d) => { d.expenses = d.expenses.filter((x) => !(x.id === id && x.weddingId === o.ctx.wedding.id && (!o.scope.side || x.responsibility === o.scope.side))); });
+  await mutate(o, (d) => { d.expenses = d.expenses.filter((x) => !(x.id === id && x.weddingId === o.ctx.wedding.id && (!o.scope.side || x.responsibility === o.scope.side))); });
   refresh(o);
 }
 
@@ -531,7 +534,7 @@ export async function saveVendor(form: FormData) {
     eventIds: form.getAll("eventIds").map(String), status: (str(form, "status") || "researching") as Vendor["status"], notes: str(form, "notes", 1000) || undefined,
   };
   if (!values.name) return;
-  mutate((d) => {
+  await mutate(o, (d) => {
     const v = id && d.vendors.find((x) => x.id === id && x.weddingId === o.ctx.wedding.id);
     if (v) Object.assign(v, values); else d.vendors.push({ id: uid("ven"), weddingId: o.ctx.wedding.id, ...values });
   });
@@ -540,7 +543,7 @@ export async function saveVendor(form: FormData) {
 
 export async function setVendorStatus(form: FormData) {
   const o = await edit("vendors");
-  mutate((d) => {
+  await mutate(o, (d) => {
     const v = d.vendors.find((x) => x.id === str(form, "id") && x.weddingId === o.ctx.wedding.id);
     if (v) v.status = str(form, "status") as Vendor["status"];
   });
@@ -549,7 +552,7 @@ export async function setVendorStatus(form: FormData) {
 
 export async function deleteVendor(form: FormData) {
   const o = await edit("vendors");
-  mutate((d) => { d.vendors = d.vendors.filter((x) => !(x.id === str(form, "id") && x.weddingId === o.ctx.wedding.id)); });
+  await mutate(o, (d) => { d.vendors = d.vendors.filter((x) => !(x.id === str(form, "id") && x.weddingId === o.ctx.wedding.id)); });
   refresh(o);
 }
 
@@ -558,9 +561,9 @@ export async function deleteVendor(form: FormData) {
 export async function saveWebsite(form: FormData) {
   const o = await edit("website");
   const slug = str(form, "slug", 60).toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  if (slug && slug !== o.ctx.wedding.slug && o.d.weddings.some((w) => w.slug === slug)) throw new Error("That web address is taken");
+  // Another wedding's slug is rejected by the unique index when this saves ("That web address is taken").
   const lines = (k: string, max = 8000) => str(form, k, max).split("\n").map((s) => s.trim()).filter(Boolean);
-  mutate((d) => {
+  await mutate(o, (d) => {
     const w = d.weddings.find((x) => x.id === o.ctx.wedding.id)!;
     Object.assign(w, {
       slug: slug || w.slug,
@@ -600,26 +603,25 @@ export async function inviteCollaborator(form: FormData) {
   const email = str(form, "email", 200).toLowerCase();
   const role = str(form, "role") as Role;
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Invalid email");
-  mutate((d) => {
-    let user = d.users.find((u) => u.email === email);
-    if (!user) {
-      user = { id: uid("usr"), email, name: str(form, "name", 80) || email.split("@")[0], passwordHash: hashPassword(newToken()), createdAt: new Date().toISOString() };
-      d.users.push(user);
-    }
-    if (d.collaborators.some((c) => c.userId === user!.id && c.weddingId === o.ctx.wedding.id)) return;
-    d.collaborators.push({
-      id: uid("col"), weddingId: o.ctx.wedding.id, userId: user.id, role, relationship: str(form, "relationship", 80),
-      eventIds: role === "event_organizer" ? form.getAll("eventIds").map(String) : undefined, invitedAt: new Date().toISOString(),
-    });
-    d.outbox.unshift({ id: uid("msg"), weddingId: o.ctx.wedding.id, channel: "email", to: email, subject: `${o.ctx.user.name} invited you to help plan ${o.ctx.wedding.partner1} & ${o.ctx.wedding.partner2}'s wedding`, body: "Sign in to Qubool to accept.", kind: "invitation", createdAt: new Date().toISOString() });
-    audit(d, o.ctx.wedding.id, o.ctx.user.name, "collaborator_invite", `${email} as ${role}`);
+  // Adds an existing account right away, or holds the invitation until someone verifies that email.
+  const { error } = await o.sb.rpc("invite_collaborator", {
+    p_wedding: o.ctx.wedding.id, p_email: email, p_name: str(form, "name", 80), p_role: role,
+    p_relationship: str(form, "relationship", 80), p_event_ids: role === "event_organizer" ? form.getAll("eventIds").map(String) : null,
   });
+  if (error) throw new Error(error.message);
+  refresh(o);
+}
+
+export async function cancelInvite(form: FormData) {
+  const o = await edit("settings");
+  const { error } = await o.sb.from("collaborator_invites").delete().eq("id", str(form, "id")).eq("wedding_id", o.ctx.wedding.id);
+  if (error) throw new Error(error.message);
   refresh(o);
 }
 
 export async function updateCollaborator(form: FormData) {
   const o = await edit("settings");
-  mutate((d) => {
+  await mutate(o, (d) => {
     const c = d.collaborators.find((x) => x.id === str(form, "id") && x.weddingId === o.ctx.wedding.id);
     if (!c || c.userId === o.ctx.user.id) return; // can't demote yourself
     if (form.get("remove")) { d.collaborators = d.collaborators.filter((x) => x !== c); audit(d, o.ctx.wedding.id, o.ctx.user.name, "collaborator_remove", c.relationship); return; }
@@ -632,7 +634,7 @@ export async function updateCollaborator(form: FormData) {
 
 export async function saveMahr(form: FormData) {
   const o = await edit("mahr");
-  mutate((d) => {
+  await mutate(o, (d) => {
     const w = d.weddings.find((x) => x.id === o.ctx.wedding.id)!;
     w.mahr = { amount: str(form, "amount", 200), notes: str(form, "notes", 2000) };
   });
@@ -641,8 +643,8 @@ export async function saveMahr(form: FormData) {
 
 export async function resetDemo() {
   const o = await edit("settings");
-  if (o.ctx.wedding.id !== DEMO_WEDDING_ID) throw new Error("Only the demo wedding can be reset");
-  resetDb();
+  if (!demoEnabled() || o.ctx.wedding.id !== DEMO_WEDDING_ID || o.scope.role !== "admin") throw new Error("Only the demo wedding can be reset");
+  await loadDemoSeed(adminClient());
   revalidatePath("/", "layout");
   redirect("/dashboard");
 }
