@@ -9,7 +9,7 @@ import { requireOrg } from "../dashboard";
 import { syncSubscription } from "../payments";
 import { LISTING_TIERS } from "../plans";
 import { fromRow, type Row } from "../rows";
-import { checkoutExpiry, paymentsEnabled, stripe, tierItemPrice, tierLineItem } from "../stripe";
+import { checkoutExpiry, paymentsEnabled, stripe, tierItemPrice, tierLineItem, CHECKOUT_LABEL } from "../stripe";
 import { demoEnabled } from "../supabase/env";
 import { adminClient, anonClient, serverClient } from "../supabase/server";
 import type { Inquiry, Listing, ListingTier } from "../types";
@@ -158,6 +158,7 @@ export async function changeListingTier(form: FormData) {
   const meta = { kind: "tier", listing_id: l.id, tier, user_id: user.id };
   const customer = subs?.find((x) => x.stripe_customer_id)?.stripe_customer_id ?? undefined;
   const session = await stripe().checkout.sessions.create({
+    integration_identifier: CHECKOUT_LABEL.tier,
     mode: "subscription",
     line_items: [tierLineItem(tier)],
     ...(customer ? { customer } : { customer_email: user.email || undefined }),

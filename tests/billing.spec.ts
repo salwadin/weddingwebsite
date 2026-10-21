@@ -106,6 +106,70 @@ test("a vendor subscription sets the tier, and its end returns the listing to Ba
   expect(await tier()).toBe("basic");
 });
 
+const planOf = async () => (await admin.from("weddings").select("plan").eq("id", DEMO_WEDDING_ID).single()).data!.plan;
+const statusOf = async (sessionId: string) => (await admin.from("payments").select("status").eq("stripe_checkout_session_id", sessionId).single()).data!.status;
+const charge = (pi: string, refunded: boolean, amountRefunded: number) =>
+  ({ id: `ch_test_${uniq()}`, object: "charge", amount: 14900, amount_refunded: amountRefunded, refunded, currency: "usd", payment_intent: pi });
+const dispute = (pi: string, status: string, amount = 34900) =>
+  ({ id: `dp_test_${uniq()}`, object: "dispute", amount, currency: "usd", payment_intent: pi, reason: "fraudulent", status });
+
+test("a full refund takes the plan away; a partial refund doesn't", async ({ request }) => {
+  await admin.from("payments").delete().eq("wedding_id", DEMO_WEDDING_ID); // start from no paid plans
+  await admin.from("weddings").update({ plan: "free", trial_ends_at: null }).eq("id", DEMO_WEDDING_ID);
+  const s = planSession("plus", 14900);
+  await post(request, event("checkout.session.completed", s));
+  expect(await planOf()).toBe("plus");
+
+  await post(request, event("charge.refunded", charge(s.payment_intent, false, 5000)));
+  expect(await planOf()).toBe("plus");
+  expect(await statusOf(s.id)).toBe("paid");
+
+  expect((await post(request, event("charge.refunded", charge(s.payment_intent, true, 14900)))).status()).toBe(200);
+  expect(await planOf()).toBe("free");
+  expect(await statusOf(s.id)).toBe("refunded");
+  const { data: log } = await admin.from("audit_log").select("action,detail").eq("wedding_id", DEMO_WEDDING_ID).in("action", ["payment_refunded", "payment_partial_refund"]);
+  expect(log!.map((l) => l.action).sort()).toEqual(["payment_partial_refund", "payment_refunded"]);
+  expect(log!.find((l) => l.action === "payment_refunded")!.detail).toContain("Plan → Essentials");
+});
+
+test("a dispute removes the plan until it's won; fraud warnings are logged", async ({ request }) => {
+  await admin.from("payments").delete().eq("wedding_id", DEMO_WEDDING_ID); // start from no paid plans
+  await admin.from("weddings").update({ plan: "free", trial_ends_at: null }).eq("id", DEMO_WEDDING_ID);
+  const plus = planSession("plus", 14900), sig = planSession("signature", 20000);
+  await post(request, event("checkout.session.completed", plus));
+  await post(request, event("checkout.session.completed", sig));
+  expect(await planOf()).toBe("signature");
+
+  // The Signature upgrade is disputed: the wedding falls back to what's still paid (Plus).
+  await post(request, event("charge.dispute.created", dispute(sig.payment_intent, "needs_response", 20000)));
+  expect(await planOf()).toBe("plus");
+  expect(await statusOf(sig.id)).toBe("disputed");
+
+  // Lost disputes change nothing further; a won dispute restores Signature.
+  await post(request, event("charge.dispute.closed", dispute(sig.payment_intent, "lost", 20000)));
+  expect(await planOf()).toBe("plus");
+  await post(request, event("charge.dispute.closed", dispute(sig.payment_intent, "won", 20000)));
+  expect(await planOf()).toBe("signature");
+  expect(await statusOf(sig.id)).toBe("paid");
+
+  await post(request, event("radar.early_fraud_warning.created", { id: `issfr_test_${uniq()}`, object: "radar.early_fraud_warning", payment_intent: plus.payment_intent, charge: "ch_x", fraud_type: "card_never_received", actionable: true }));
+  const { data: pay } = await admin.from("payments").select("fraud_warning_at,status").eq("stripe_checkout_session_id", plus.id).single();
+  expect(pay!.fraud_warning_at).toBeTruthy();
+  expect(pay!.status).toBe("paid"); // a warning alone doesn't take the plan away
+  const { data: warn } = await admin.from("audit_log").select("detail").eq("wedding_id", DEMO_WEDDING_ID).eq("action", "payment_fraud_warning");
+  expect(warn![0].detail).toContain("card never received");
+});
+
+test("a vendor checkout that hasn't been paid yet doesn't upgrade the listing", async ({ request }) => {
+  await admin.from("listings").update({ tier: "basic" }).eq("id", LISTING);
+  const s = {
+    id: `cs_test_${uniq()}`, object: "checkout.session", mode: "subscription", status: "complete", payment_status: "unpaid",
+    amount_total: 4900, currency: "usd", customer: "cus_test_noor", subscription: `sub_test_${uniq()}`, metadata: { kind: "tier", listing_id: LISTING, tier: "featured" },
+  };
+  expect((await post(request, event("checkout.session.completed", s))).status()).toBe(200);
+  expect((await admin.from("listings").select("tier").eq("id", LISTING).single()).data!.tier).toBe("basic");
+});
+
 test("unsigned or wrongly signed webhooks are rejected", async ({ request }) => {
   await admin.from("weddings").update({ plan: "free" }).eq("id", DEMO_WEDDING_ID);
   const forged = await post(request, event("checkout.session.completed", planSession("signature", 34900)), "whsec_not_the_secret");

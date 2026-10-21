@@ -56,6 +56,7 @@ export async function fulfillPlanCheckout(admin: Supabase, s: Stripe.Checkout.Se
 export async function fulfillTierCheckout(admin: Supabase, s: Stripe.Checkout.Session) {
   const listingId = s.metadata?.listing_id, tier = s.metadata?.tier as ListingTier | undefined;
   if (!listingId || !tier || !(tier in LISTING_TIERS)) throw new Error(`Checkout ${s.id} has no listing tier metadata`);
+  if (s.payment_status === "unpaid") return false; // a delayed payment method: async_payment_succeeded follows
   const subId = id(s.subscription);
   const fields = { stripe_subscription_id: subId, stripe_customer_id: id(s.customer), updated_at: new Date().toISOString() };
 
@@ -112,6 +113,104 @@ export async function syncSubscription(admin: Supabase, sub: Stripe.Subscription
   must(await admin.from("listings").update({ tier: (others?.[0]?.tier as ListingTier) ?? "basic" }).eq("id", listingId));
 }
 
+// ---------------------------------------------------------------------------
+// Refunds, disputes and early fraud warnings.
+// Each event is resolved through Stripe's object graph (charge/dispute →
+// PaymentIntent → our payments row, or → invoice → vendor subscription), not
+// through metadata.
+// ---------------------------------------------------------------------------
+
+/** Our wedding payment for a PaymentIntent, if it paid for a plan. */
+async function planPaymentFor(admin: Supabase, paymentIntent: string | null) {
+  if (!paymentIntent) return null;
+  const { data } = must(await admin.from("payments").select("id,wedding_id,plan,amount,currency,status")
+    .eq("stripe_payment_intent_id", paymentIntent).maybeSingle());
+  return data;
+}
+
+/** The highest plan the wedding still has a 'paid' payment for; Essentials if none. */
+async function recomputePlan(admin: Supabase, weddingId: string): Promise<Plan> {
+  const { data: paid } = must(await admin.from("payments").select("plan").eq("wedding_id", weddingId).eq("status", "paid"));
+  return (paid ?? []).reduce<Plan>((best, p) => (PLAN_ORDER.indexOf(p.plan as Plan) > PLAN_ORDER.indexOf(best) ? (p.plan as Plan) : best), "free");
+}
+
+/** Set a plan payment's status, recompute the wedding's plan from what's still paid, and log it. */
+async function setPlanPaymentStatus(admin: Supabase, paymentIntent: string | null, status: "paid" | "refunded" | "disputed", detail: string) {
+  const pay = await planPaymentFor(admin, paymentIntent);
+  if (!pay || pay.status === status) return false;
+  must(await admin.from("payments").update({ status }).eq("id", pay.id));
+  const plan = await recomputePlan(admin, pay.wedding_id);
+  const { data: w } = must(await admin.from("weddings").select("plan").eq("id", pay.wedding_id).maybeSingle());
+  if (w && w.plan !== plan) must(await admin.from("weddings").update({ plan }).eq("id", pay.wedding_id));
+  must(await admin.from("audit_log").insert({
+    wedding_id: pay.wedding_id, actor: "Stripe", action: "payment_" + status,
+    detail: `${detail}${w && w.plan !== plan ? ` Plan → ${PLANS[plan].name}.` : ""}`,
+  }));
+  return true;
+}
+
+const money = (cents: number, currency: string) => (cents / 100).toLocaleString("en-US", { style: "currency", currency });
+
+/** The vendor subscription a PaymentIntent paid an invoice for (needs the API key). */
+async function subscriptionFor(paymentIntent: string | null) {
+  if (!paymentIntent || !paymentsEnabled()) return null;
+  const list = await stripe().invoicePayments.list({ payment: { type: "payment_intent", payment_intent: paymentIntent }, expand: ["data.invoice"], limit: 1 });
+  const invoice = list.data[0]?.invoice;
+  const sub = invoice && typeof invoice === "object" && "parent" in invoice ? invoice.parent?.subscription_details?.subscription : null;
+  return id(sub ?? null);
+}
+
+/** A charge was refunded. A full refund of a plan payment takes the plan away. */
+async function handleRefund(admin: Supabase, charge: Stripe.Charge) {
+  const pi = id(charge.payment_intent);
+  const amount = money(charge.amount_refunded, charge.currency);
+  if (!charge.refunded) {
+    // Partial refund: the couple keeps the plan; just note it.
+    const pay = await planPaymentFor(admin, pi);
+    if (pay) must(await admin.from("audit_log").insert({ wedding_id: pay.wedding_id, actor: "Stripe", action: "payment_partial_refund", detail: `Partial refund of ${amount} on the ${PLANS[pay.plan as Plan].name} payment.` }));
+    return;
+  }
+  if (await setPlanPaymentStatus(admin, pi, "refunded", `The ${amount} payment was refunded in full.`)) return;
+  // A refunded vendor invoice doesn't end the subscription by itself; that's a decision made in Stripe.
+  const sub = await subscriptionFor(pi);
+  if (sub) console.warn(`Stripe: vendor subscription ${sub} had a payment of ${amount} refunded.`);
+}
+
+/** A payment was disputed (a chargeback). Plans are removed; vendor subscriptions are cancelled. */
+async function handleDispute(admin: Supabase, dispute: Stripe.Dispute) {
+  const pi = id(dispute.payment_intent);
+  const amount = money(dispute.amount, dispute.currency);
+  if (await setPlanPaymentStatus(admin, pi, "disputed", `The ${amount} payment was disputed (${dispute.reason.replace(/_/g, " ")}). Respond in the Stripe Dashboard by the evidence deadline.`)) return;
+  const sub = await subscriptionFor(pi);
+  if (sub) {
+    // Stop billing a customer who is disputing; customer.subscription.deleted then returns the listing to Basic.
+    await stripe().subscriptions.cancel(sub, { prorate: false, invoice_now: false });
+    console.warn(`Stripe: cancelled vendor subscription ${sub} after a ${amount} dispute.`);
+  }
+}
+
+/** A dispute closed. If we won, the plan payment counts again. */
+async function handleDisputeClosed(admin: Supabase, dispute: Stripe.Dispute) {
+  if (dispute.status !== "won") return;
+  await setPlanPaymentStatus(admin, id(dispute.payment_intent), "paid", `Dispute on the ${money(dispute.amount, dispute.currency)} payment was won; the plan is restored.`);
+}
+
+/** Card network flagged a likely-fraudulent charge. Logged for a human to decide (refunding avoids a dispute fee). */
+async function handleFraudWarning(admin: Supabase, warning: Stripe.Radar.EarlyFraudWarning) {
+  const pi = id(warning.payment_intent ?? null);
+  const pay = await planPaymentFor(admin, pi);
+  if (pay) {
+    must(await admin.from("payments").update({ fraud_warning_at: new Date().toISOString() }).eq("id", pay.id));
+    must(await admin.from("audit_log").insert({
+      wedding_id: pay.wedding_id, actor: "Stripe", action: "payment_fraud_warning",
+      detail: `Early fraud warning (${warning.fraud_type.replace(/_/g, " ")}) on the ${money(pay.amount, pay.currency)} payment. Consider refunding it in Stripe to avoid a dispute.`,
+    }));
+    return;
+  }
+  const sub = await subscriptionFor(pi);
+  if (sub) console.warn(`Stripe: early fraud warning on vendor subscription ${sub} (${warning.fraud_type}).`);
+}
+
 /** Abandoned or failed Checkout: clear the "payment in progress" state. */
 async function closeCheckout(admin: Supabase, s: Stripe.Checkout.Session, status: "expired" | "failed") {
   if (s.metadata?.kind === "plan") must(await admin.from("payments").update({ status }).eq("stripe_checkout_session_id", s.id).eq("status", "pending"));
@@ -139,6 +238,14 @@ export async function handleStripeEvent(admin: Supabase, event: Stripe.Event) {
       const sub = event.data.object;
       return syncSubscription(admin, paymentsEnabled() ? await stripe().subscriptions.retrieve(sub.id) : sub);
     }
+    case "charge.refunded":
+      return handleRefund(admin, event.data.object);
+    case "charge.dispute.created":
+      return handleDispute(admin, event.data.object);
+    case "charge.dispute.closed":
+      return handleDisputeClosed(admin, event.data.object);
+    case "radar.early_fraud_warning.created":
+      return handleFraudWarning(admin, event.data.object);
   }
 }
 
