@@ -1,5 +1,7 @@
 # Qubool: planning for Muslim & multicultural weddings
 
+[![CI](https://github.com/salwadin/weddingwebsite/actions/workflows/ci.yml/badge.svg)](https://github.com/salwadin/weddingwebsite/actions/workflows/ci.yml)
+
 **One wedding. Every celebration. Every guest, their own invitation.**
 
 Qubool plans weddings that span many days and many layers: a Nikah, henna night, reception and Walima; or a katb al-kitab, zaffa and reception; or an aghd and aroosi. Every event has its own guest list, visibility, and RSVP rules. The same website automatically shows each family only the events they're invited to. Uninvited events never appear: there are no locked cards and no "you're not invited" messages, and their data never reaches the browser.
@@ -46,6 +48,10 @@ npm test                          # starts `npm run dev` if it isn't running
 ```
 
 `CI=1 npm test` runs against a production build instead (`npm run build` first). The billing tests post signed Stripe webhooks to `/api/stripe/webhook`; they don't need a Stripe account.
+
+### CI
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every pull request and on pushes to `main`: typecheck, a local Supabase from `supabase/migrations`, a production build, then the full Playwright suite (`CI=1 npm test`). Stripe stays off (no secret key); the billing tests sign webhooks with a fake secret. When tests fail, the run's **playwright-results** artifact has the HTML report and traces (`npx playwright show-trace <trace.zip>`).
 
 ### Payments (Stripe test mode)
 
