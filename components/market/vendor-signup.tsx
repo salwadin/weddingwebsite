@@ -7,6 +7,7 @@ import { Button, Field, Input, Select } from "@/components/ui";
 
 export function VendorSignupForm({ action }: { action: (s: FormState, f: FormData) => Promise<FormState> }) {
   const [state, formAction, pending] = useActionState(action, null);
+  if (state?.ok && state.message) return <p className="rounded-xl bg-cream px-3 py-3 text-sm">{state.message}</p>;
   return (
     <form action={formAction} className="space-y-3">
       <Field label="Business name"><Input name="business" required /></Field>

@@ -6,6 +6,7 @@ import { logout } from "@/lib/actions/auth";
 import { Badge, Logo } from "@/components/ui";
 import { DashNav, type NavKey } from "@/components/dash/nav";
 import { DemoBar } from "@/components/demo-bar";
+import { DEMO_WEDDING_ID } from "@/lib/seed";
 import { redirect } from "next/navigation";
 
 export const metadata = { title: "Dashboard" };
@@ -54,7 +55,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </form>
       </aside>
       <main className="min-w-0 px-4 pb-28 pt-6 sm:px-8 lg:px-10 lg:pt-10">{children}</main>
-      {w.id === "wed_ayesha_omar" && <DemoBar current={`Wedding administrator · ${ctx.user.name}`} />}
+      {w.id === DEMO_WEDDING_ID && <DemoBar current={`Wedding administrator · ${ctx.user.name}`} />}
     </div>
   );
 }

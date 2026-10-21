@@ -1,49 +1,31 @@
 import "server-only";
-import { cookies } from "next/headers";
-import { createHmac, scryptSync, timingSafeEqual } from "node:crypto";
-import { db, mutate } from "./db";
-import type { Collaborator, Household, InviteToken, User, Wedding } from "./types";
+import { cache } from "react";
+import { cookies, headers } from "next/headers";
+import { columns, fromRow, type Row } from "./rows";
+import { loadWeddingRow } from "./db";
+import { serverClient } from "./supabase/server";
+import type { Collaborator, User, Wedding } from "./types";
 
-const SECRET = process.env.SESSION_SECRET || "qubool-dev-secret-change-me";
-export const ORG_COOKIE = "q_org";
+// Organizers and vendors sign in with Supabase Auth (email + password, verified
+// email). Its session lives in Supabase's own cookies, refreshed by proxy.ts.
+// Guests never sign in: their personal invitation link sets GUEST_COOKIE.
 export const GUEST_COOKIE = "q_guest";
-export const siteCookie = (weddingId: string) => `q_site_${weddingId}`;
+/** Proof that this browser entered a wedding's site password (see site_unlock()). */
+export const siteCookie = (slug: string) => `q_site_${slug}`;
 
-function sign(value: string) {
-  return createHmac("sha256", SECRET).update(value).digest("base64url");
-}
+const secure = process.env.NODE_ENV === "production";
 
-function safeEqual(a: string, b: string) {
-  const x = Buffer.from(a), y = Buffer.from(b);
-  return x.length === y.length && timingSafeEqual(x, y);
-}
-
-export function verifyPassword(pw: string, stored: string) {
-  const [salt, hash] = stored.split(":");
-  return safeEqual(scryptSync(pw, salt, 32).toString("hex"), hash);
-}
-
-// ---------- organizer sessions ----------
-
-export async function startOrganizerSession(userId: string) {
-  const exp = Date.now() + 1000 * 60 * 60 * 24 * 14;
-  const payload = `${userId}.${exp}`;
-  (await cookies()).set(ORG_COOKIE, `${payload}.${sign(payload)}`, {
-    httpOnly: true, sameSite: "lax", path: "/", secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 24 * 14,
-  });
-}
-
-export async function endOrganizerSession() {
-  (await cookies()).delete(ORG_COOKIE);
-}
-
-export async function currentUser(): Promise<User | null> {
-  const raw = (await cookies()).get(ORG_COOKIE)?.value;
-  if (!raw) return null;
-  const [userId, exp, sig] = raw.split(".");
-  if (!userId || !exp || !sig || !safeEqual(sign(`${userId}.${exp}`), sig) || Number(exp) < Date.now()) return null;
-  return db().users.find((u) => u.id === userId) ?? null;
-}
+/** The signed-in user (verified with Supabase Auth on every request), or null. */
+export const currentUser = cache(async (): Promise<User | null> => {
+  const sb = await serverClient();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return null;
+  const { data: p } = await sb.from("profiles").select("name,kind").eq("id", user.id).maybeSingle();
+  return {
+    id: user.id, email: user.email ?? "", name: (p?.name as string) ?? user.email ?? "",
+    kind: (p?.kind as User["kind"]) ?? "couple", createdAt: user.created_at,
+  };
+});
 
 export interface OrgContext {
   user: User;
@@ -52,62 +34,53 @@ export interface OrgContext {
 }
 
 /** The organizer's wedding + role, or null when signed out / not a collaborator. */
-export async function organizerContext(): Promise<OrgContext | null> {
+export const organizerContext = cache(async (): Promise<OrgContext | null> => {
   const user = await currentUser();
   if (!user) return null;
-  const d = db();
-  const collaborator = d.collaborators.find((c) => c.userId === user.id);
-  if (!collaborator) return null;
-  const wedding = d.weddings.find((w) => w.id === collaborator.weddingId);
+  const sb = await serverClient();
+  const { data } = await sb.from("wedding_collaborators").select(columns("collaborators"))
+    .eq("user_id", user.id).order("invited_at").limit(1).maybeSingle();
+  if (!data) return null;
+  const collaborator = fromRow("collaborators", data as unknown as Row);
+  const wedding = await loadWeddingRow(sb, collaborator.weddingId);
   return wedding ? { user, wedding, collaborator } : null;
-}
+});
 
 // ---------- guest sessions (personalized invitation links) ----------
 
-/** Validate a token: must exist and not be revoked. Constant work regardless of outcome. */
-export function lookupToken(token: string | undefined): InviteToken | null {
-  if (!token || token.length < 20 || token.length > 64) return null;
-  const t = db().tokens.find((x) => x.token.length === token.length && safeEqual(x.token, token));
-  return t && !t.revokedAt ? t : null;
+/** The raw invitation token from this browser's cookie. Only ever sent to the guest RPCs. */
+export async function guestToken() {
+  return (await cookies()).get(GUEST_COOKIE)?.value ?? null;
 }
 
 export async function setGuestSession(token: string) {
-  (await cookies()).set(GUEST_COOKIE, token, {
-    httpOnly: true, sameSite: "lax", path: "/", secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 24 * 180,
-  });
-}
-
-/**
- * The household behind the current visitor's invitation cookie, scoped to one wedding.
- * A token for a different wedding, or a revoked token, yields null (public view).
- */
-export async function guestHousehold(weddingId: string): Promise<Household | null> {
-  const t = lookupToken((await cookies()).get(GUEST_COOKIE)?.value);
-  if (!t || t.weddingId !== weddingId) return null;
-  return db().households.find((h) => h.id === t.householdId && h.weddingId === weddingId) ?? null;
-}
-
-export function recordTokenUse(token: string) {
-  mutate((d) => {
-    const t = d.tokens.find((x) => x.token === token);
-    if (t) { t.lastUsedAt = new Date().toISOString(); t.useCount++; }
-    const h = t && d.households.find((x) => x.id === t.householdId);
-    if (h && h.deliveryStatus !== "bounced") h.deliveryStatus = "opened";
-  });
+  (await cookies()).set(GUEST_COOKIE, token, { httpOnly: true, sameSite: "lax", path: "/", secure, maxAge: 60 * 60 * 24 * 180 });
 }
 
 // ---------- site password ----------
 
-export async function hasSiteAccess(w: Wedding) {
-  if (!w.passwordProtected) return true;
-  if (await guestHousehold(w.id)) return true; // personal links bypass the shared password
-  if (await organizerContext()) return true;
-  const v = (await cookies()).get(siteCookie(w.id))?.value;
-  return !!v && safeEqual(v, sign(`${w.id}:${w.sitePassword ?? ""}`));
+export async function siteKey(slug: string) {
+  return (await cookies()).get(siteCookie(slug))?.value ?? null;
 }
 
-export async function grantSiteAccess(w: Wedding) {
-  (await cookies()).set(siteCookie(w.id), sign(`${w.id}:${w.sitePassword ?? ""}`), {
-    httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 60,
-  });
+export async function grantSiteAccess(slug: string, key: string) {
+  (await cookies()).set(siteCookie(slug), key, { httpOnly: true, sameSite: "lax", path: "/", secure, maxAge: 60 * 60 * 24 * 60 });
+}
+
+// ---------- auth helpers ----------
+
+/** Absolute URL on this site, for links inside auth emails. */
+export async function siteUrl(path: string) {
+  const h = await headers();
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
+  return new URL(path, origin).toString();
+}
+
+/** Where a signed-in user belongs: vendors to their portal, couples to their wedding (or onboarding). */
+export async function homeFor(userId: string) {
+  const sb = await serverClient();
+  const { data: p } = await sb.from("profiles").select("kind").eq("id", userId).maybeSingle();
+  if (p?.kind === "vendor") return "/vendor";
+  const { count } = await sb.from("wedding_collaborators").select("id", { count: "exact", head: true }).eq("user_id", userId);
+  return count ? "/dashboard" : "/onboarding";
 }

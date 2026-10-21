@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { db } from "@/lib/db";
+import { publishedListings } from "@/lib/listings";
 import { cn } from "@/lib/format";
 import { CATEGORIES, TIER_RANK, TRADITION_LABELS, VENDOR_TAGS } from "@/lib/marketplace";
 import { ButtonLink, Empty, Input, Select } from "@/components/ui";
@@ -13,7 +13,7 @@ type SP = { q?: string; category?: string; city?: string; tradition?: string; ta
 
 export default async function Marketplace({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
-  const all = db().listings.filter((l) => l.published);
+  const all = await publishedListings();
   const q = (sp.q ?? "").trim().toLowerCase();
   const results = all.filter((l) =>
     (!q || [l.name, l.tagline, l.description, l.category, l.city].join(" ").toLowerCase().includes(q)) &&

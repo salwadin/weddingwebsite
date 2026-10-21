@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Check, ExternalLink, LogOut } from "lucide-react";
 import { currentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { publishedListings } from "@/lib/listings";
+import { fromRow } from "@/lib/rows";
+import { serverClient } from "@/lib/supabase/server";
 import { logout } from "@/lib/actions/auth";
 import { changeListingTier, setInquiryStatus, updateListing } from "@/lib/actions/marketplace";
 import { cn, shortDate } from "@/lib/format";
@@ -11,7 +13,7 @@ import { LISTING_TIERS } from "@/lib/plans";
 import type { ListingTier } from "@/lib/types";
 import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, Logo, Select, Stat, Textarea } from "@/components/ui";
 import { DemoBar } from "@/components/demo-bar";
-import { DEMO_VENDOR_USER } from "@/lib/seed";
+import { DEMO_VENDOR_EMAIL } from "@/lib/seed";
 
 export const metadata = { title: "Vendor portal" };
 
@@ -20,14 +22,16 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
   const user = await currentUser();
   if (!user) redirect("/login");
   if (user.kind !== "vendor") redirect("/dashboard");
-  const d = db();
-  const l = d.listings.find((x) => x.ownerUserId === user.id);
-  if (!l) redirect("/for-vendors");
-  const all = d.inquiries.filter((q) => q.listingId === l.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const sb = await serverClient();
+  const { data: mine } = await sb.from("listings").select("*").eq("owner_user_id", user.id).limit(1).maybeSingle();
+  if (!mine) redirect("/for-vendors");
+  const l = fromRow("listings", mine);
+  const { data: inq } = await sb.from("inquiries").select("*").eq("listing_id", l.id).order("created_at", { ascending: false }).limit(500);
+  const all = (inq ?? []).map((r) => fromRow("inquiries", r));
   const show = sp.show ?? "open";
   const inquiries = all.filter((q) => show === "all" || (show === "open" ? q.status === "new" || q.status === "replied" : q.status === show));
   const booked = all.filter((q) => q.status === "booked").length;
-  const rank = d.listings.filter((x) => x.published && x.category === l.category).sort((a, b) => ({ spotlight: 0, featured: 1, basic: 2 })[a.tier] - ({ spotlight: 0, featured: 1, basic: 2 })[b.tier] || b.rating - a.rating).findIndex((x) => x.id === l.id) + 1;
+  const rank = (await publishedListings()).filter((x) => x.published && x.category === l.category).sort((a, b) => ({ spotlight: 0, featured: 1, basic: 2 })[a.tier] - ({ spotlight: 0, featured: 1, basic: 2 })[b.tier] || b.rating - a.rating).findIndex((x) => x.id === l.id) + 1;
 
   return (
     <div className="min-h-screen pb-28">
@@ -133,7 +137,7 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
           </form>
         </Card>
       </main>
-      {user.id === DEMO_VENDOR_USER && <DemoBar current="Vendor · Noor Light Studios" />}
+      {user.email === DEMO_VENDOR_EMAIL && <DemoBar current="Vendor · Noor Light Studios" />}
     </div>
   );
 }

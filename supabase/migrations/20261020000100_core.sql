@@ -1,5 +1,5 @@
 -- =====================================================================
--- Qubool · Supabase / PostgreSQL schema with Row Level Security
+-- Qubool · core schema with Row Level Security
 --
 -- Mirrors lib/types.ts. Security model:
 --   • Organizers authenticate with Supabase Auth. RLS limits every row to
@@ -8,10 +8,21 @@
 --     is revoked everywhere). They reach data only through SECURITY DEFINER
 --     functions that take an invitation token and return exactly the events
 --     that household may see. Tokens are stored as SHA-256 hashes.
+--
+-- Supabase installs extensions into the `extensions` schema, so every
+-- SECURITY DEFINER function below pins `search_path = public, extensions`.
 -- =====================================================================
 
-create extension if not exists pgcrypto;
-create extension if not exists citext;
+create extension if not exists pgcrypto with schema extensions;
+create extension if not exists citext with schema extensions;
+
+-- Supabase's default privileges grant anon full access to every new table and
+-- function in `public`. Guests must only ever reach data through the RPCs, so
+-- turn that off before creating anything. (Functions are also executable by
+-- PUBLIC by default; each function revokes that explicitly.)
+alter default privileges in schema public revoke all on tables from anon;
+alter default privileges in schema public revoke all on sequences from anon;
+alter default privileges in schema public revoke execute on functions from anon, public;
 
 -- ---------- enums ----------
 create type side as enum ('bride', 'groom', 'both');
@@ -56,6 +67,7 @@ create table wedding_collaborators (
   invited_at timestamptz not null default now(),
   unique (wedding_id, user_id)
 );
+create index on wedding_collaborators (user_id);
 
 create table events (
   id uuid primary key default gen_random_uuid(),
@@ -118,6 +130,7 @@ create table rsvp_responses (
   updated_via text not null check (updated_via in ('guest_link', 'organizer')),
   unique (event_id, guest_id)
 );
+create index on rsvp_responses (household_id);
 
 create table invitation_tokens (
   token_hash bytea primary key,   -- sha256(token); the raw token is only ever in the guest's link
@@ -133,11 +146,11 @@ create index on invitation_tokens (household_id);
 create table public_registrations (
   id uuid primary key default gen_random_uuid(),
   event_id uuid not null references events on delete cascade,
-  name text not null, email citext, phone text,
+  name text not null, email extensions.citext, phone text,
   adults int not null default 1 check (adults between 1 and 10),
   children int not null default 0 check (children between 0 and 10),
   status text not null default 'confirmed' check (status in ('confirmed', 'waitlist', 'cancelled')),
-  duplicate_of uuid references public_registrations,
+  duplicate_of uuid references public_registrations on delete set null,
   created_at timestamptz not null default now()
 );
 create unique index public_reg_email_once on public_registrations (event_id, lower(email::text)) where status <> 'cancelled';
@@ -148,6 +161,7 @@ create table vendors (
   category text not null, name text not null, contact text, phone text, email text,
   event_ids uuid[] not null default '{}', status text not null default 'researching', notes text
 );
+create index on vendors (wedding_id);
 create table budgets ( -- optional per-category allocations
   id uuid primary key default gen_random_uuid(), wedding_id uuid not null references weddings on delete cascade,
   event_id uuid references events on delete cascade, category text not null, amount numeric(12,2) not null
@@ -159,11 +173,13 @@ create table expenses (
   estimated numeric(12,2) not null default 0, actual numeric(12,2) not null default 0, paid numeric(12,2) not null default 0,
   responsibility side not null default 'both', due_date date
 );
+create index on expenses (wedding_id);
 create table tasks (
   id uuid primary key default gen_random_uuid(), wedding_id uuid not null references weddings on delete cascade,
   event_id uuid references events on delete cascade, title text not null, assignee text, due_date date,
   done boolean not null default false, side side not null default 'both'
 );
+create index on tasks (wedding_id);
 create table website_themes (
   id text primary key, name text not null, tokens jsonb not null
 );
@@ -177,27 +193,36 @@ create table outbox (
   channel text not null, recipient text not null, household_id uuid references households on delete set null,
   subject text, body text, kind text not null, created_at timestamptz not null default now()
 );
+create index on outbox (wedding_id, created_at desc);
 create table audit_log (
   id bigint generated always as identity primary key, wedding_id uuid not null references weddings on delete cascade,
   at timestamptz not null default now(), actor text not null, action text not null, detail text
 );
+create index on audit_log (wedding_id, at desc);
 
 -- =====================================================================
 -- Organizer authorization helpers
 -- =====================================================================
 create or replace function collab(w uuid) returns wedding_collaborators
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = public, extensions as $$
   select * from wedding_collaborators where wedding_id = w and user_id = auth.uid() limit 1
 $$;
 
+-- `collab(w) is not null` is only true when *every* column of the row is non-null
+-- (SQL row semantics), which fails for most collaborators. Use this instead.
+create or replace function is_collab(w uuid) returns boolean
+language sql stable security definer set search_path = public, extensions as $$
+  select exists (select 1 from wedding_collaborators where wedding_id = w and user_id = auth.uid())
+$$;
+
 create or replace function has_role(w uuid, roles collab_role[]) returns boolean
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = public, extensions as $$
   select exists (select 1 from wedding_collaborators where wedding_id = w and user_id = auth.uid() and role = any(roles))
 $$;
 
 -- Household visible to the current organizer (side + event scoping).
 create or replace function can_see_household(h households) returns boolean
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = public, extensions as $$
   select case (collab(h.wedding_id)).role
     when 'admin' then true when 'guest_manager' then true when 'viewer' then true
     when 'bride_organizer' then h.side in ('bride', 'both')
@@ -206,6 +231,9 @@ language sql stable security definer set search_path = public as $$
       select 1 from event_invitations i where i.household_id = h.id and i.event_id = any((collab(h.wedding_id)).event_ids))
     else false end
 $$;
+
+revoke execute on function collab(uuid), is_collab(uuid), has_role(uuid, collab_role[]), can_see_household(households) from public, anon;
+grant execute on function collab(uuid), is_collab(uuid), has_role(uuid, collab_role[]), can_see_household(households) to authenticated;
 
 -- =====================================================================
 -- Row Level Security
@@ -224,6 +252,7 @@ alter table vendors enable row level security;
 alter table budgets enable row level security;
 alter table expenses enable row level security;
 alter table tasks enable row level security;
+alter table website_themes enable row level security;
 alter table invitation_designs enable row level security;
 alter table outbox enable row level security;
 alter table audit_log enable row level security;
@@ -231,14 +260,14 @@ alter table audit_log enable row level security;
 -- Anonymous visitors get nothing directly. Guest access is via the RPCs below.
 revoke all on all tables in schema public from anon;
 
-create policy w_read on weddings for select using (collab(id) is not null);
+create policy w_read on weddings for select using (is_collab(id));
 create policy w_write on weddings for update using (has_role(id, '{admin}'));
 create policy mahr_admin on wedding_private for all using (has_role(wedding_id, '{admin}'));
-create policy collab_read on wedding_collaborators for select using (collab(wedding_id) is not null);
+create policy collab_read on wedding_collaborators for select using (is_collab(wedding_id));
 create policy collab_admin on wedding_collaborators for all using (has_role(wedding_id, '{admin}'));
 
 create policy ev_read on events for select using (
-  collab(wedding_id) is not null and ((collab(wedding_id)).event_ids is null or id = any((collab(wedding_id)).event_ids)));
+  is_collab(wedding_id) and ((collab(wedding_id)).event_ids is null or id = any((collab(wedding_id)).event_ids)));
 create policy ev_write on events for all using (
   has_role(wedding_id, '{admin}')
   or (has_role(wedding_id, '{bride_organizer}') and host_side in ('bride', 'both'))
@@ -255,7 +284,8 @@ create policy g_write on guests for all using (exists (select 1 from households 
 
 create policy inv_read on event_invitations for select using (exists (select 1 from households h where h.id = household_id and can_see_household(h)));
 create policy inv_write on event_invitations for all using (exists (select 1 from households h where h.id = household_id and can_see_household(h)
-  and has_role(h.wedding_id, '{admin,bride_organizer,groom_organizer,event_organizer,guest_manager}')));
+  and (has_role(h.wedding_id, '{admin,bride_organizer,groom_organizer,guest_manager}')
+       or (has_role(h.wedding_id, '{event_organizer}') and event_id = any((collab(h.wedding_id)).event_ids)))));
 
 create policy rsvp_read on rsvp_responses for select using (exists (select 1 from households h where h.id = household_id and can_see_household(h)));
 create policy rsvp_write on rsvp_responses for all using (exists (select 1 from households h where h.id = household_id and can_see_household(h)
@@ -264,7 +294,9 @@ create policy rsvp_write on rsvp_responses for all using (exists (select 1 from 
 create policy tok_manage on invitation_tokens for all using (exists (select 1 from households h where h.id = household_id and can_see_household(h)
   and has_role(h.wedding_id, '{admin,bride_organizer,groom_organizer,event_organizer,guest_manager}')));
 
-create policy reg_org on public_registrations for all using (exists (select 1 from events e where e.id = event_id and collab(e.wedding_id) is not null));
+create policy reg_read on public_registrations for select using (exists (select 1 from events e where e.id = event_id and is_collab(e.wedding_id)));
+create policy reg_write on public_registrations for update using (exists (select 1 from events e where e.id = event_id
+  and has_role(e.wedding_id, '{admin,bride_organizer,groom_organizer,guest_manager}')));
 
 create policy ven on vendors for select using (has_role(wedding_id, '{admin,bride_organizer,groom_organizer,event_organizer,budget_manager,viewer}'));
 create policy ven_w on vendors for all using (has_role(wedding_id, '{admin,budget_manager}'));
@@ -277,187 +309,23 @@ create policy exp_w on expenses for all using (
   has_role(wedding_id, '{admin,budget_manager}')
   or (has_role(wedding_id, '{bride_organizer}') and responsibility = 'bride')
   or (has_role(wedding_id, '{groom_organizer}') and responsibility = 'groom'));
-create policy tasks_rw on tasks for all using (collab(wedding_id) is not null
+create policy tasks_rw on tasks for all using (is_collab(wedding_id)
   and ((collab(wedding_id)).event_ids is null or event_id = any((collab(wedding_id)).event_ids)));
-create policy des on invitation_designs for all using (collab(wedding_id) is not null);
-create policy outbox_r on outbox for select using (collab(wedding_id) is not null);
+create policy themes_read on website_themes for select to authenticated using (true);
+create policy des on invitation_designs for all using (is_collab(wedding_id));
+create policy outbox_r on outbox for select using (is_collab(wedding_id));
 create policy audit_r on audit_log for select using (has_role(wedding_id, '{admin,bride_organizer,groom_organizer,guest_manager,viewer}'));
 
 -- =====================================================================
 -- Guest-facing RPCs (SECURITY DEFINER; the only path for anonymous visitors)
+-- These are the v1 versions; 20261020000300_app.sql replaces them with the
+-- versions the app calls.
 -- =====================================================================
 
 -- Resolve a raw token to its household. Returns null for unknown or revoked tokens.
 create or replace function _household_for_token(p_token text) returns uuid
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = public, extensions as $$
   select household_id from invitation_tokens
   where token_hash = digest(p_token, 'sha256') and revoked_at is null
 $$;
-
--- Everything the wedding website may render for this visitor. Uninvited
--- events are filtered here, in the database, never in the browser.
-create or replace function guest_site(p_slug text, p_token text default null) returns jsonb
-language plpgsql stable security definer set search_path = public as $$
-declare w weddings; hh uuid;
-begin
-  select * into w from weddings where slug = p_slug and published;
-  if not found then return null; end if;
-  hh := _household_for_token(p_token);
-  if hh is not null and not exists (select 1 from households where id = hh and wedding_id = w.id) then hh := null; end if;
-  return jsonb_build_object(
-    'wedding', jsonb_build_object('slug', w.slug, 'partner1', w.partner1, 'partner2', w.partner2, 'tagline', w.tagline,
-       'heroImage', w.hero_image, 'story', w.story, 'gallery', w.gallery, 'faqs', w.faqs, 'travel', w.travel,
-       'registry', w.registry, 'theme', w.theme, 'culture', w.culture),
-    'events', coalesce((
-      select jsonb_agg(to_jsonb(e) - 'budget' - 'wedding_id' - 'capacity' order by e.date, e.sort_order)
-      from events e
-      where e.wedding_id = w.id and (e.visibility = 'public'
-        or (hh is not null and exists (select 1 from event_invitations i where i.event_id = e.id and i.household_id = hh)))
-    ), '[]'),
-    'household', case when hh is null then null else (
-      select jsonb_build_object('name', h.name,
-        'members', (select jsonb_agg(jsonb_build_object('id', g.id, 'firstName', g.first_name, 'lastName', g.last_name, 'isChild', g.is_child, 'isPlusOne', g.is_plus_one)) from guests g where g.household_id = h.id),
-        'invitations', (select jsonb_agg(jsonb_build_object('eventId', i.event_id, 'guestIds', i.guest_ids)) from event_invitations i where i.household_id = h.id),
-        'rsvps', (select jsonb_agg(jsonb_build_object('eventId', r.event_id, 'guestId', r.guest_id, 'status', r.status, 'meal', r.meal)) from rsvp_responses r where r.household_id = h.id))
-      from households h where h.id = hh) end
-  );
-end $$;
-
--- Household RSVP. p_responses: [{ "eventId": uuid, "guestId": uuid, "status": "attending"|"declined", "meal": text }]
-create or replace function guest_submit_rsvp(p_token text, p_responses jsonb) returns int
-language plpgsql volatile security definer set search_path = public as $$
-declare hh uuid; r jsonb; n int := 0; e events;
-begin
-  hh := _household_for_token(p_token);
-  if hh is null then raise exception 'invalid or revoked invitation'; end if;
-  for r in select * from jsonb_array_elements(p_responses) loop
-    select ev.* into e from events ev join event_invitations i on i.event_id = ev.id
-      where ev.id = (r->>'eventId')::uuid and i.household_id = hh and (r->>'guestId')::uuid = any(i.guest_ids);
-    if not found or e.rsvp_mode = 'none' then continue; end if;          -- not invited: silently ignored
-    if e.rsvp_deadline is not null and current_date > e.rsvp_deadline then raise exception 'deadline passed for %', e.name; end if;
-    insert into rsvp_responses (event_id, guest_id, household_id, status, meal, updated_via)
-    values (e.id, (r->>'guestId')::uuid, hh, (r->>'status')::rsvp_status,
-            case when (r->>'meal') = any(e.meal_options) then r->>'meal' end, 'guest_link')
-    on conflict (event_id, guest_id) do update set status = excluded.status, meal = excluded.meal, updated_at = now(), updated_via = 'guest_link';
-    n := n + 1;
-  end loop;
-  insert into audit_log (wedding_id, actor, action, detail)
-    select h.wedding_id, h.name, 'rsvp', n || ' responses' from households h where h.id = hh;
-  update invitation_tokens set last_used_at = now(), use_count = use_count + 1 where token_hash = digest(p_token, 'sha256');
-  return n;
-end $$;
-
--- Optional head-count for open-invitation events, with cap + waitlist + duplicate detection.
-create or replace function public_register(p_event uuid, p_name text, p_email text, p_phone text, p_adults int, p_children int) returns text
-language plpgsql volatile security definer set search_path = public as $$
-declare e events; used int; existing uuid;
-begin
-  select * into e from events where id = p_event and visibility = 'public' and rsvp_mode <> 'none';
-  if not found then raise exception 'not accepting registrations'; end if;
-  select id into existing from public_registrations where event_id = p_event and lower(email::text) = lower(p_email) and status <> 'cancelled';
-  if existing is not null then
-    update public_registrations set name = p_name, adults = p_adults, children = p_children where id = existing;
-    return 'updated';
-  end if;
-  select coalesce(sum(adults + children), 0) into used from public_registrations where event_id = p_event and status = 'confirmed';
-  if e.capacity is not null and used + p_adults + p_children > e.capacity then
-    if not e.waitlist then raise exception 'event is full'; end if;
-    insert into public_registrations (event_id, name, email, phone, adults, children, status) values (p_event, p_name, p_email, p_phone, p_adults, p_children, 'waitlist');
-    return 'waitlist';
-  end if;
-  insert into public_registrations (event_id, name, email, phone, adults, children) values (p_event, p_name, p_email, p_phone, p_adults, p_children);
-  return 'confirmed';
-end $$;
-
-grant execute on function guest_site(text, text), guest_submit_rsvp(text, jsonb), public_register(uuid, text, text, text, int, int) to anon, authenticated;
-revoke execute on function _household_for_token(text) from anon, authenticated;
-
--- =====================================================================
--- v2: plans, outfits, design studio, vendor marketplace
--- =====================================================================
-create type plan as enum ('free', 'plus', 'signature');
-create type listing_tier as enum ('basic', 'featured', 'spotlight');
-
-alter table weddings
-  add column plan plan not null default 'free',
-  add column trial_ends_at timestamptz,
-  add column tradition text,
-  add column custom_domain text unique;
-alter table events add column palette text[] not null default '{}';
-
--- Effective plan: an active trial unlocks Signature.
-create or replace function wedding_plan(w uuid) returns plan
-language sql stable security definer set search_path = public as $$
-  select case when trial_ends_at > now() then 'signature'::plan else plan end from weddings where id = w
-$$;
-
-create table outfits (
-  id uuid primary key default gen_random_uuid(),
-  wedding_id uuid not null references weddings on delete cascade,
-  event_id uuid references events on delete set null,
-  vendor_id uuid references vendors on delete set null,
-  wearer text not null, role text not null, side side not null default 'both',
-  title text not null, designer text,
-  status text not null default 'idea' check (status in ('idea','sourcing','ordered','alterations','ready','worn')),
-  colors text[] not null default '{}', image text,
-  cost numeric(12,2) not null default 0, paid numeric(12,2) not null default 0, due_date date,
-  pieces jsonb not null default '[]', fittings jsonb not null default '[]', notes text
-);
-alter table outfits enable row level security;
-create policy outfits_read on outfits for select using (
-  collab(wedding_id) is not null and wedding_plan(wedding_id) <> 'free'
-  and ((collab(wedding_id)).role not in ('bride_organizer','groom_organizer')
-       or side = 'both' or side::text = replace((collab(wedding_id)).role::text, '_organizer', '')));
-create policy outfits_write on outfits for all using (
-  has_role(wedding_id, '{admin,bride_organizer,groom_organizer,event_organizer}') and wedding_plan(wedding_id) <> 'free'
-  and ((collab(wedding_id)).role not in ('bride_organizer','groom_organizer')
-       or side = 'both' or side::text = replace((collab(wedding_id)).role::text, '_organizer', '')));
-
-create table boards (
-  id uuid primary key default gen_random_uuid(),
-  wedding_id uuid not null references weddings on delete cascade,
-  event_id uuid references events on delete set null,
-  name text not null, kind text not null check (kind in ('moodboard','floorplan')),
-  items jsonb not null default '[]', updated_at timestamptz not null default now()
-);
-alter table boards enable row level security;
-create policy boards_read on boards for select using (collab(wedding_id) is not null and wedding_plan(wedding_id) = 'signature');
-create policy boards_write on boards for all using (
-  has_role(wedding_id, '{admin,bride_organizer,groom_organizer,event_organizer}') and wedding_plan(wedding_id) = 'signature'
-  and ((collab(wedding_id)).event_ids is null or event_id = any((collab(wedding_id)).event_ids)));
-
-create table listings (
-  id uuid primary key default gen_random_uuid(),
-  owner_user_id uuid references auth.users on delete set null,
-  name text not null, category text not null, city text, serves text[] not null default '{}',
-  tagline text, description text, images text[] not null default '{}',
-  price_range int not null default 2 check (price_range between 1 and 4),
-  tags text[] not null default '{}', traditions text[] not null default '{}',
-  email text not null, phone text, website text,
-  tier listing_tier not null default 'basic',
-  rating numeric(2,1) not null default 0, review_count int not null default 0,
-  published boolean not null default false, views int not null default 0,
-  created_at timestamptz not null default now()
-);
-alter table listings enable row level security;
--- The marketplace is public; owners manage their own listing. Tier changes go through the billing webhook (service role).
-create policy listings_public on listings for select using (published or owner_user_id = auth.uid());
-create policy listings_owner on listings for update using (owner_user_id = auth.uid()) with check (owner_user_id = auth.uid());
-grant select on listings to anon;
-
-create table inquiries (
-  id uuid primary key default gen_random_uuid(),
-  listing_id uuid not null references listings on delete cascade,
-  wedding_id uuid references weddings on delete set null,
-  from_name text not null, from_email text not null, event_date date, guests int,
-  message text not null,
-  status text not null default 'new' check (status in ('new','replied','booked','closed')),
-  created_at timestamptz not null default now()
-);
-alter table inquiries enable row level security;
-create policy inquiries_vendor on inquiries for select using (exists (select 1 from listings l where l.id = listing_id and l.owner_user_id = auth.uid()));
-create policy inquiries_vendor_update on inquiries for update using (exists (select 1 from listings l where l.id = listing_id and l.owner_user_id = auth.uid()));
-create policy inquiries_couple on inquiries for select using (wedding_id is not null and collab(wedding_id) is not null);
--- Anyone may send an inquiry to a published listing (rate-limit at the edge).
-create policy inquiries_insert on inquiries for insert with check (exists (select 1 from listings l where l.id = listing_id and l.published));
-grant insert on inquiries to anon;
+revoke execute on function _household_for_token(text) from public, anon, authenticated;

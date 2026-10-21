@@ -50,7 +50,7 @@ export async function createBoard(form: FormData) {
   if (eventId && !o.events.some((e) => e.id === eventId)) throw new Error("Unknown event");
   if (o.scope.eventIds && !eventId) throw new Error("Choose one of your events");
   const id = uid("brd");
-  mutate((d) => {
+  await mutate(o, (d) => {
     d.boards.push({
       id, weddingId: o.ctx.wedding.id, kind: t.kind, eventId,
       name: String(form.get("name") ?? "").trim().slice(0, 80) || t.label,
@@ -66,7 +66,7 @@ export async function saveBoard(boardId: string, items: unknown, name?: string) 
   const b = boardOrThrow(o, boardId);
   const clean = sanitize(items);
   const updatedAt = new Date().toISOString();
-  mutate((d) => {
+  await mutate(o, (d) => {
     const t = d.boards.find((x) => x.id === b.id)!;
     t.items = clean;
     if (name !== undefined) t.name = name.trim().slice(0, 80) || t.name;
@@ -78,7 +78,7 @@ export async function saveBoard(boardId: string, items: unknown, name?: string) 
 export async function deleteBoard(form: FormData) {
   const o = await editor();
   const b = boardOrThrow(o, String(form.get("id")));
-  mutate((d) => { d.boards = d.boards.filter((x) => x.id !== b.id); });
+  await mutate(o, (d) => { d.boards = d.boards.filter((x) => x.id !== b.id); });
   revalidatePath("/dashboard/studio");
   redirect("/dashboard/studio");
 }

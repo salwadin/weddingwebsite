@@ -1,42 +1,53 @@
-import { createHmac, randomBytes, scryptSync } from "node:crypto";
+import { createHash } from "node:crypto";
 import { buildBoards, buildInquiries, buildListings, buildOutfits, EVENT_PALETTES } from "./seed-extras";
+import { deriveToken } from "./tokens";
 import type {
   Database, Expense, Guest, Household, Invitation, PublicRegistration, Rsvp, Side, Task,
   Vendor, Wedding, WeddingEvent,
 } from "./types";
 
-/** Demo password for every seeded organizer account. */
+// The Ayesha & Omar sample wedding. `npm run seed` loads it into Supabase
+// (lib/seed-load.ts); the /demo/* switcher and the privacy tests rely on it.
+
+/** Stable uuid for a readable seed id like "evt_mehndi", so links and tests survive a re-seed. */
+export function seedUuid(name: string) {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(name)) return name;
+  const h = createHash("sha1").update(`qubool-seed:${name}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-${((parseInt(h[16], 16) & 3) | 8).toString(16)}${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
+
+/** Demo password for every seeded account. */
 export const DEMO_PASSWORD = "qubool-demo";
 
 /** Fixed household ids used by the "test as…" switcher. */
 export const DEMO_HOUSEHOLDS = {
-  nikkahOnly: "hh_demo_nikkah",
-  nikkahShaadi: "hh_demo_shaadi",
-  allEvents: "hh_demo_all",
+  nikkahOnly: seedUuid("hh_demo_nikkah"),
+  nikkahShaadi: seedUuid("hh_demo_shaadi"),
+  allEvents: seedUuid("hh_demo_all"),
 } as const;
 
-export const DEMO_WEDDING_ID = "wed_ayesha_omar";
-export const DEMO_VENDOR_USER = "usr_vendor_noor";
-/** Bump when the data shape changes; older local data files are rebuilt from the seed. */
-export const DB_VERSION = 2;
+export const DEMO_EVENTS = {
+  mehndi: seedUuid("evt_mehndi"),
+  nikkah: seedUuid("evt_nikkah"),
+  shaadi: seedUuid("evt_shaadi"),
+  walima: seedUuid("evt_walima"),
+} as const;
 
-export function hashPassword(pw: string) {
-  const salt = randomBytes(16).toString("hex");
-  return `${salt}:${scryptSync(pw, salt, 32).toString("hex")}`;
-}
+export const DEMO_WEDDING_ID = seedUuid("wed_ayesha_omar");
+export const DEMO_ADMIN_EMAIL = "ayesha@example.com";
+export const DEMO_VENDOR_EMAIL = "vendor@example.com";
 
-export function newToken() {
-  return randomBytes(24).toString("base64url");
-}
-
-/**
- * Sample-wedding links are derived from SESSION_SECRET so every server instance
- * (e.g. multiple Vercel functions) builds the same links. Links issued later are random.
- */
-function seedToken(householdId: string) {
-  const secret = process.env.SESSION_SECRET || "qubool-dev-secret-change-me";
-  return createHmac("sha256", secret).update(`seed-token:${householdId}`).digest("base64url").slice(0, 32);
-}
+/** Seed accounts. Their auth ids come from Supabase when they're created. */
+export const SEED_USERS = [
+  { id: "usr_ayesha", email: DEMO_ADMIN_EMAIL, name: "Ayesha Siddiqui" },
+  { id: "usr_omar", email: "omar@example.com", name: "Omar Farooq" },
+  { id: "usr_nasreen", email: "nasreen@example.com", name: "Nasreen Siddiqui" },
+  { id: "usr_khalid", email: "khalid@example.com", name: "Khalid Farooq" },
+  { id: "usr_zara", email: "zara@example.com", name: "Zara Siddiqui" },
+  { id: "usr_hamza", email: "hamza@example.com", name: "Hamza Farooq" },
+  { id: "usr_planner", email: "planner@example.com", name: "Rukhsana (Planner)" },
+  { id: "usr_vendor_noor", email: DEMO_VENDOR_EMAIL, name: "Mahnoor (Noor Light Studios)", kind: "vendor" as const },
+];
 
 // Deterministic PRNG so the sample wedding looks the same after every reset.
 function mulberry32(a: number) {
@@ -62,16 +73,7 @@ export function buildSeed(): Database {
   const id = (p: string) => `${p}_${(++n).toString(36).padStart(4, "0")}${Math.floor(rand() * 1e6).toString(36)}`;
   const now = today();
 
-  const users = [
-    { id: "usr_ayesha", email: "ayesha@example.com", name: "Ayesha Siddiqui" },
-    { id: "usr_omar", email: "omar@example.com", name: "Omar Farooq" },
-    { id: "usr_nasreen", email: "nasreen@example.com", name: "Nasreen Siddiqui" },
-    { id: "usr_khalid", email: "khalid@example.com", name: "Khalid Farooq" },
-    { id: "usr_zara", email: "zara@example.com", name: "Zara Siddiqui" },
-    { id: "usr_hamza", email: "hamza@example.com", name: "Hamza Farooq" },
-    { id: "usr_planner", email: "planner@example.com", name: "Rukhsana (Planner)" },
-    { id: DEMO_VENDOR_USER, email: "vendor@example.com", name: "Mahnoor (Noor Light Studios)", kind: "vendor" as const },
-  ].map((u) => ({ ...u, passwordHash: hashPassword(DEMO_PASSWORD), createdAt: now }));
+  const users = SEED_USERS.map((u) => ({ ...u, createdAt: now }));
 
   const W = DEMO_WEDDING_ID;
   const wedding: Wedding = {
@@ -361,11 +363,15 @@ export function buildSeed(): Database {
       createdAt: new Date(Date.parse("2026-09-10") + rand() * 30 * 864e5).toISOString(),
     });
   }
+  // Same person registering twice under a different email: flagged by name.
   const dupSrc = registrations[3];
-  registrations.push({ ...dupSrc, id: id("reg"), name: dupSrc.name.toUpperCase(), duplicateOf: dupSrc.id, createdAt: now });
+  registrations.push({ ...dupSrc, id: id("reg"), name: dupSrc.name.toUpperCase(), email: `${dupSrc.email.split("@")[0]}.personal@example.com`, duplicateOf: dupSrc.id, createdAt: now });
 
   // ---------- tokens ----------
-  const tokens = households.map((h) => ({ token: seedToken(h.id), householdId: h.id, weddingId: W, createdAt: now, useCount: 0 }));
+  const tokens = households.map((h) => {
+    const tid = seedUuid(`tok:${h.id}`);
+    return { id: tid, token: deriveToken(tid), householdId: h.id, weddingId: W, createdAt: now, useCount: 0 };
+  });
 
   // ---------- planning ----------
   const vendor = (category: string, name: string, contact: string, eventIds: string[], status: Vendor["status"], notes?: string): Vendor =>
@@ -443,12 +449,11 @@ export function buildSeed(): Database {
   ].map((c) => ({ ...c, weddingId: W, invitedAt: now })) as Database["collaborators"];
 
   for (const e of events) e.palette = EVENT_PALETTES[e.id];
-  const listings = buildListings(DEMO_VENDOR_USER);
+  const listings = buildListings("usr_vendor_noor");
   for (const v of vendors) v.listingId = listings.find((l) => l.name === v.name)?.id;
 
-  return {
-    version: DB_VERSION,
-    users, weddings: [wedding], collaborators, events, households, guests, invitations, rsvps, tokens, registrations,
+  return withUuids({
+    users, invites: [], weddings: [wedding], collaborators, events, households, guests, invitations, rsvps, tokens, registrations,
     vendors, expenses, tasks, outbox: [],
     outfits: buildOutfits(W, (name) => vendors.find((v) => v.name === name)?.id),
     boards: buildBoards(W),
@@ -462,5 +467,19 @@ export function buildSeed(): Database {
       { id: "des_shaadi", weddingId: W, eventId: "evt_shaadi", template: "jali", englishText: "Mr. and Mrs. Javed Siddiqui request the pleasure of your company at the Shaadi of their daughter Ayesha with Omar Farooq", urduText: "شادی کی تقریب میں آپ کی شرکت باعثِ عزت ہوگی", arabicText: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", showQr: true },
       { id: "des_walima", weddingId: W, eventId: "evt_walima", template: "minimal", englishText: "Mr. and Mrs. Khalid Farooq request the honour of your presence at the Walima of their son Omar with Ayesha", urduText: "ولیمہ کی تقریب میں تشریف لائیں", arabicText: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", showQr: true },
     ],
-  };
+  });
+}
+
+const ID_FIELDS = ["id", "weddingId", "eventId", "householdId", "guestId", "vendorId", "listingId", "duplicateOf"];
+
+/** Swap the readable seed ids ("evt_nikkah") for the uuids the database uses. User ids are mapped at load time. */
+function withUuids(d: Database): Database {
+  for (const [key, rows] of Object.entries(d)) {
+    if (key === "users") continue;
+    for (const row of rows as Record<string, unknown>[]) {
+      for (const f of ID_FIELDS) if (typeof row[f] === "string") row[f] = seedUuid(row[f] as string);
+      for (const f of ["eventIds", "guestIds"]) if (Array.isArray(row[f])) row[f] = (row[f] as string[]).map(seedUuid);
+    }
+  }
+  return d;
 }
