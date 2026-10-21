@@ -45,7 +45,19 @@ npx playwright install chromium   # once
 npm test                          # starts `npm run dev` if it isn't running
 ```
 
-`CI=1 npm test` runs against a production build instead (`npm run build` first).
+`CI=1 npm test` runs against a production build instead (`npm run build` first). The billing tests post signed Stripe webhooks to `/api/stripe/webhook`; they don't need a Stripe account.
+
+### Payments (Stripe test mode)
+
+With `QUBOOL_DEMO=on`, plan and tier changes are instant and free. To try real Checkout locally:
+
+1. In `.env.local`, set `QUBOOL_DEMO=off` (or remove it) and `STRIPE_SECRET_KEY=sk_test_…` from the [Stripe dashboard](https://dashboard.stripe.com/test/apikeys).
+2. Forward webhooks to the app with the [Stripe CLI](https://docs.stripe.com/stripe-cli) and put the `whsec_…` it prints in `STRIPE_WEBHOOK_SECRET`:
+   ```bash
+   stripe listen --forward-to localhost:3000/api/stripe/webhook
+   ```
+3. Restart `npm run dev`. As a couple, **Plan & Billing → Upgrade**; as a vendor, **Promotion → Upgrade**. Pay with card `4242 4242 4242 4242`, any future date and CVC.
+4. Cancelling a vendor subscription goes through Stripe's customer portal: enable it once under **Settings → Billing → Customer portal** in test mode.
 
 ### Test modes
 
@@ -95,8 +107,9 @@ GitHub Pages can't run this app because it needs a server. Vercel can, and it's 
 
 1. Go to [vercel.com](https://vercel.com), sign in with GitHub, and choose **Add New → Project**.
 2. Import `salwadin/weddingwebsite`, and leave the framework preset as **Next.js**.
-3. Under **Environment Variables**, add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL` (your Vercel URL) and `INVITE_TOKEN_SECRET` (a long random value). Add `QUBOOL_DEMO=on` only for a demo deployment.
-4. Click **Deploy**. Every push to `main` redeploys automatically.
+3. Under **Environment Variables**, add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL` (your Vercel URL), `INVITE_TOKEN_SECRET` (a long random value), `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` (and optionally the `STRIPE_PRICE_*` ids, see `.env.example`). Add `QUBOOL_DEMO=on` only for a demo deployment.
+4. In Stripe, **Developers → Webhooks → Add endpoint**: `https://<your-domain>/api/stripe/webhook`, with the events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `customer.subscription.created`, `customer.subscription.updated` and `customer.subscription.deleted`. Its signing secret is `STRIPE_WEBHOOK_SECRET`. Turn on the customer portal (**Settings → Billing → Customer portal**) so vendors can cancel.
+5. Click **Deploy**. Every push to `main` redeploys automatically.
 
 ## The sample wedding
 
@@ -126,7 +139,9 @@ New weddings get every Signature feature for 14 days. Limits only block *adding*
 
 Vendors list for free. **Featured** ($49/mo) and **Spotlight** ($149/mo) rank higher in search, add a badge, and appear as "Recommended" inside couples' dashboards (labelled as sponsored).
 
-Plan and tier changes are **simulated** when `QUBOOL_DEMO=on`: nothing is charged. Without demo mode they're disabled for now. Organizers and vendors can't write `plan`, `trial_ends_at` or `tier` themselves (column-level grants), so the live version will set them from a Stripe webhook with the service role.
+Payments go through **Stripe Checkout**: plans are a one-time payment per wedding (upgrading from Plus to Signature costs the $200 difference), vendor tiers are monthly subscriptions that vendors switch in place (prorated) and cancel in Stripe's customer portal. Organizers and vendors can't write `plan`, `trial_ends_at` or `tier` themselves (column-level grants): the webhook (`app/api/stripe/webhook`) sets them with the service role once Stripe confirms payment, and returns a listing to Basic when its subscription ends. It records every event id in `stripe_events`, so redeliveries are ignored. The `payments` and `subscriptions` tables are readable by the wedding's administrators and the listing's owner. When a buyer returns from Checkout, the billing page also confirms the session directly, so the new plan shows even if the webhook is a few seconds behind.
+
+When `QUBOOL_DEMO=on`, plan and tier changes are **simulated** instead: instant, and nothing is charged.
 
 ## Project structure
 
@@ -148,6 +163,7 @@ app/
   for-vendors/                 Vendor sign-up and promotion tiers
   vendor/                      Vendor portal (listing, inquiries, promotion)
   pricing/                     Couple plans
+  api/stripe/webhook/          Stripe webhook: sets plans and vendor tiers
   dashboard/                   Organizer app
     page.tsx                   Per-event stats, discrepancies, budget, tasks, activity
     website/  events/  guests/  invitations/  rsvps/  outfits/  studio/  checklist/  budget/  vendors/  settings/  billing/
@@ -167,6 +183,8 @@ lib/
   supabase/                    Server, anon and service-role clients; env settings
   dashboard.ts                 requireOrg() gate, plan checks, RSVP stats, discrepancy checks
   plans.ts                     Couple plans, vendor tiers, feature gates, trial logic
+  stripe.ts                    Stripe client, Checkout line items, price ids
+  payments.ts                  Applies Checkout and subscription results (webhook + return page)
   marketplace.ts               Vendor categories, tags, traditions
   studio-templates.ts          Floor plan & moodboard templates
   actions/                     Server actions (site, dashboard, auth, onboarding)
@@ -178,7 +196,7 @@ supabase/
   templates/                   Auth email templates (confirmation, password reset)
   config.toml                  Local Supabase settings (email confirmation on, 8-character passwords)
 scripts/seed.mts               npm run seed
-tests/                         Playwright: privacy rules and dashboard write paths
+tests/                         Playwright: privacy rules, dashboard write paths, Stripe webhook
 ```
 
 ## How privacy is enforced
@@ -235,10 +253,10 @@ Qubool runs on Supabase: Postgres with Row Level Security for data, Supabase Aut
    ```
 2. In **Authentication → URL Configuration**, set the Site URL to your domain and add `https://<your-domain>/**` to the redirect URLs.
 3. In **Authentication → Emails**, paste the templates from `supabase/templates/` (they link to `/auth/confirm`), keep **Confirm email** on, and set up custom SMTP (for example Resend) so emails come from your domain.
-4. Set the environment variables listed in [Deploy to Vercel](#deploy-to-vercel). Generate a fresh `INVITE_TOKEN_SECRET`; keep it stable, because it derives every invitation link.
+4. Set the environment variables listed in [Deploy to Vercel](#deploy-to-vercel), including the live Stripe keys and the webhook endpoint described there. Generate a fresh `INVITE_TOKEN_SECRET`; keep it stable, because it derives every invitation link.
 5. Leave `QUBOOL_DEMO` unset in production, and only run `npm run seed` against a demo project.
 
-Still to do before a public launch: Stripe Checkout + webhook for plans and vendor tiers, real email/WhatsApp delivery from the outbox (Resend), rate limiting on the guest RPCs at the edge, and more targeted queries in `lib/db.ts` (each dashboard page currently loads the whole wedding the organizer may see, which is fine at a few thousand guests).
+Still to do before a public launch: real email/WhatsApp delivery from the outbox (Resend), rate limiting on the guest RPCs at the edge, and more targeted queries in `lib/db.ts` (each dashboard page currently loads the whole wedding the organizer may see, which is fine at a few thousand guests).
 
 ## Phases
 

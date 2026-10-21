@@ -5,6 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 const PORT = Number(process.env.PORT ?? 3000);
+// tests/billing.spec.ts signs webhooks with this; the server it starts verifies with it.
+// (If you reuse a dev server you started yourself, give it the same STRIPE_WEBHOOK_SECRET.)
+process.env.STRIPE_WEBHOOK_SECRET ||= "whsec_qubool_local_tests";
 
 export default defineConfig({
   testDir: "tests",
@@ -22,6 +25,6 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { QUBOOL_DEMO: "on" },
+    env: { QUBOOL_DEMO: "on", STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET },
   },
 });

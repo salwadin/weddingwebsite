@@ -5,7 +5,10 @@ import { redirect } from "next/navigation";
 import { currentUser, organizerContext, siteUrl } from "../auth";
 import { audit, mutate, uid } from "../db";
 import { requireOrg } from "../dashboard";
+import { syncSubscription } from "../payments";
+import { LISTING_TIERS } from "../plans";
 import { fromRow, type Row } from "../rows";
+import { checkoutExpiry, paymentsEnabled, stripe, tierItemPrice, tierLineItem } from "../stripe";
 import { demoEnabled } from "../supabase/env";
 import { adminClient, anonClient, serverClient } from "../supabase/server";
 import type { Inquiry, Listing, ListingTier } from "../types";
@@ -112,18 +115,73 @@ export async function setInquiryStatus(form: FormData) {
 }
 
 /**
- * Demo only (QUBOOL_DEMO=on): switches the promotion tier without charging. Vendors can't
- * write `tier` themselves (column grant); a real build will set it from a Stripe webhook.
+ * Change the listing's promotion tier. Outside demo mode a paid tier is a monthly
+ * Stripe subscription: new subscribers go through Checkout, existing ones switch
+ * price in place, and cancelling happens in the Stripe customer portal. The
+ * webhook (or the returned subscription) sets `tier`; vendors can't (column grant).
+ *
+ * Demo (QUBOOL_DEMO=on): switches the tier immediately without charging.
  */
 export async function changeListingTier(form: FormData) {
-  const { l } = await myListing();
+  const { user, sb, l } = await myListing();
   const tier = str(form, "tier") as ListingTier;
   if (!["basic", "featured", "spotlight"].includes(tier)) return;
-  if (!demoEnabled()) throw new Error("Online payments aren't available yet.");
-  const { error } = await adminClient().from("listings").update({ tier }).eq("id", l.id);
+  if (demoEnabled()) {
+    const { error } = await adminClient().from("listings").update({ tier }).eq("id", l.id);
+    if (error) throw new Error(error.message);
+    revalidatePath("/vendor"); revalidatePath("/marketplace", "layout");
+    redirect(`/vendor?tier=${tier}#promote`);
+  }
+  if (!paymentsEnabled()) throw new Error("Online payments aren't available yet.");
+  if (tier === "basic") return openBillingPortal();
+
+  const { data: subs } = await sb.from("subscriptions").select("status,stripe_subscription_id,stripe_customer_id")
+    .eq("listing_id", l.id).order("created_at", { ascending: false });
+  const live = subs?.find((x) => x.stripe_subscription_id && ["active", "trialing", "past_due"].includes(x.status));
+  if (live) {
+    // Already subscribed: change the price on the existing subscription (prorated).
+    const current = await stripe().subscriptions.retrieve(live.stripe_subscription_id!);
+    const item = current.items.data[0];
+    const product = typeof item.price.product === "string" ? item.price.product : item.price.product.id;
+    const updated = await stripe().subscriptions.update(current.id, {
+      items: [{ id: item.id, ...tierItemPrice(tier, product) }],
+      metadata: { ...current.metadata, tier },
+      cancel_at_period_end: false,
+    });
+    await syncSubscription(adminClient(), updated);
+    revalidatePath("/vendor"); revalidatePath("/marketplace", "layout");
+    redirect(`/vendor?tier=${tier}#promote`);
+  }
+
+  const meta = { kind: "tier", listing_id: l.id, tier, user_id: user.id };
+  const customer = subs?.find((x) => x.stripe_customer_id)?.stripe_customer_id ?? undefined;
+  const session = await stripe().checkout.sessions.create({
+    mode: "subscription",
+    line_items: [tierLineItem(tier)],
+    ...(customer ? { customer } : { customer_email: user.email || undefined }),
+    client_reference_id: l.id,
+    metadata: meta,
+    subscription_data: { metadata: meta, description: `${LISTING_TIERS[tier].name}: ${l.name}` },
+    success_url: (await siteUrl("/vendor?checkout=success")) + "&session_id={CHECKOUT_SESSION_ID}#promote",
+    cancel_url: await siteUrl("/vendor?checkout=cancelled#promote"),
+    expires_at: checkoutExpiry(),
+  });
+  const { error } = await adminClient().from("subscriptions").insert({
+    listing_id: l.id, tier, status: "pending", amount: LISTING_TIERS[tier].price * 100, stripe_checkout_session_id: session.id, stripe_customer_id: customer ?? null,
+  });
   if (error) throw new Error(error.message);
-  revalidatePath("/vendor"); revalidatePath("/marketplace", "layout");
-  redirect(`/vendor?tier=${tier}#promote`);
+  redirect(session.url!);
+}
+
+/** Stripe's customer portal: card details, invoices, and cancelling the subscription. */
+export async function openBillingPortal() {
+  const { sb, l } = await myListing();
+  if (!paymentsEnabled()) throw new Error("Online payments aren't available yet.");
+  const { data } = await sb.from("subscriptions").select("stripe_customer_id").eq("listing_id", l.id)
+    .not("stripe_customer_id", "is", null).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!data?.stripe_customer_id) redirect("/vendor#promote");
+  const portal = await stripe().billingPortal.sessions.create({ customer: data.stripe_customer_id, return_url: await siteUrl("/vendor#promote") });
+  redirect(portal.url);
 }
 
 export async function recordView(listingId: string) {

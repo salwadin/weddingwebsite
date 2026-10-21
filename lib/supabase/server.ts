@@ -33,7 +33,7 @@ export const anonClient = cache((): Supabase =>
 
 /**
  * Service-role client: bypasses RLS. Only for server code that has already
- * decided the caller may do this (demo switcher, link re-send, demo billing).
+ * decided the caller may do this (demo switcher, link re-send, billing + Stripe webhook).
  * Never use it to read data on behalf of an organizer.
  */
 export function adminClient(): Supabase {
