@@ -6,7 +6,11 @@ import { publishedListings } from "@/lib/listings";
 import { fromRow } from "@/lib/rows";
 import { serverClient } from "@/lib/supabase/server";
 import { logout } from "@/lib/actions/auth";
-import { changeListingTier, setInquiryStatus, updateListing } from "@/lib/actions/marketplace";
+import { changeListingTier, openBillingPortal, setInquiryStatus, updateListing } from "@/lib/actions/marketplace";
+import { confirmCheckout } from "@/lib/payments";
+import { paymentsEnabled } from "@/lib/stripe";
+import { demoEnabled } from "@/lib/supabase/env";
+import { adminClient } from "@/lib/supabase/server";
 import { cn, shortDate } from "@/lib/format";
 import { CATEGORIES, TRADITION_LABELS, VENDOR_TAGS } from "@/lib/marketplace";
 import { LISTING_TIERS } from "@/lib/plans";
@@ -17,7 +21,7 @@ import { DEMO_VENDOR_EMAIL } from "@/lib/seed";
 
 export const metadata = { title: "Vendor portal" };
 
-export default async function VendorPortal({ searchParams }: { searchParams: Promise<{ welcome?: string; saved?: string; tier?: string; show?: string }> }) {
+export default async function VendorPortal({ searchParams }: { searchParams: Promise<{ welcome?: string; saved?: string; tier?: string; show?: string; checkout?: string; session_id?: string }> }) {
   const sp = await searchParams;
   const user = await currentUser();
   if (!user) redirect("/login");
@@ -26,6 +30,17 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
   const { data: mine } = await sb.from("listings").select("*").eq("owner_user_id", user.id).limit(1).maybeSingle();
   if (!mine) redirect("/for-vendors");
   const l = fromRow("listings", mine);
+  const demo = demoEnabled(), live = !demo && paymentsEnabled();
+  // Back from Stripe Checkout: apply the subscription now rather than waiting for the webhook.
+  if (sp.session_id && live) {
+    const tier = await confirmCheckout(adminClient(), sp.session_id, { listing_id: l.id });
+    if (tier) redirect(`/vendor?tier=${tier}#promote`);
+  }
+  const { data: subs } = await sb.from("subscriptions").select("tier,status,stripe_customer_id,current_period_end,cancel_at_period_end,created_at")
+    .eq("listing_id", l.id).order("created_at", { ascending: false }).limit(20);
+  const sub = subs?.find((x) => ["active", "trialing", "past_due"].includes(x.status));
+  const pending = subs?.find((x) => x.status === "pending" && Date.now() - new Date(x.created_at).getTime() < 60 * 60 * 1000);
+  const hasCustomer = !!subs?.some((x) => x.stripe_customer_id);
   const { data: inq } = await sb.from("inquiries").select("*").eq("listing_id", l.id).order("created_at", { ascending: false }).limit(500);
   const all = (inq ?? []).map((r) => fromRow("inquiries", r));
   const show = sp.show ?? "open";
@@ -93,6 +108,23 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
           <Card id="promote">
             <CardHeader title="Promotion" description="Higher tiers appear first in search and in couples' dashboards." />
             {sp.tier && <p className="mx-5 mt-4 rounded-xl bg-sage-soft px-3 py-2 text-sm text-[#3f5238]">You&apos;re now on {LISTING_TIERS[sp.tier as ListingTier]?.name}.</p>}
+            {sp.checkout === "success" && !sp.tier && (
+              <p className="mx-5 mt-4 rounded-xl bg-gold-soft/40 px-3 py-2 text-sm"><meta httpEquiv="refresh" content="5" />Thank you! We&apos;re confirming your subscription with Stripe…</p>
+            )}
+            {sp.checkout === "cancelled" && <p className="mx-5 mt-4 rounded-xl bg-cream px-3 py-2 text-sm">Checkout cancelled. You haven&apos;t been charged.</p>}
+            {pending && !sub && sp.checkout !== "success" && (
+              <p className="mx-5 mt-4 rounded-xl bg-cream px-3 py-2 text-sm">Your {LISTING_TIERS[pending.tier as ListingTier].name} checkout hasn&apos;t completed yet. You can start again below.</p>
+            )}
+            {sub?.status === "past_due" && <p className="mx-5 mt-4 rounded-xl bg-rose-soft px-3 py-2 text-sm">Your last payment didn&apos;t go through. Update your card under Manage billing to keep {LISTING_TIERS[l.tier].name}.</p>}
+            {sub && !demo && (
+              <div className="mx-5 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line px-3 py-2 text-sm">
+                <span>
+                  {LISTING_TIERS[sub.tier as ListingTier].name}
+                  {sub.current_period_end && <span className="text-muted"> · {sub.cancel_at_period_end ? "ends" : "renews"} {new Date(sub.current_period_end).toLocaleDateString()}</span>}
+                </span>
+                <form action={openBillingPortal}><button className="text-xs underline">Manage billing</button></form>
+              </div>
+            )}
             <div className="space-y-3 p-5">
               {(Object.keys(LISTING_TIERS) as ListingTier[]).map((t) => (
                 <div key={t} className={cn("rounded-2xl border p-4", l.tier === t ? "border-ink bg-cream/50" : "border-line")}>
@@ -101,12 +133,16 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
                     <p className="text-sm">{LISTING_TIERS[t].price ? `$${LISTING_TIERS[t].price}/mo` : "Free"}</p>
                   </div>
                   <ul className="mt-2 space-y-1 text-xs text-muted">{LISTING_TIERS[t].perks.map((p) => <li key={p} className="flex gap-1.5"><Check className="h-3.5 w-3.5 shrink-0 text-sage" />{p}</li>)}</ul>
-                  {l.tier === t ? <p className="mt-3 text-xs font-medium">Current plan</p> : (
-                    <form action={changeListingTier} className="mt-3"><input type="hidden" name="tier" value={t} /><Button size="sm" variant={LISTING_TIERS[t].price > LISTING_TIERS[l.tier].price ? "primary" : "outline"}>{LISTING_TIERS[t].price > LISTING_TIERS[l.tier].price ? "Upgrade" : "Switch"}</Button></form>
+                  {l.tier === t ? <p className="mt-3 text-xs font-medium">Current plan</p> : !demo && t === "basic" ? (
+                    hasCustomer && live ? <form action={openBillingPortal} className="mt-3"><Button size="sm" variant="outline">Cancel in billing portal</Button></form> : null
+                  ) : (
+                    <form action={changeListingTier} className="mt-3"><input type="hidden" name="tier" value={t} /><Button size="sm" disabled={!demo && !live} variant={LISTING_TIERS[t].price > LISTING_TIERS[l.tier].price ? "primary" : "outline"}>{LISTING_TIERS[t].price > LISTING_TIERS[l.tier].price ? "Upgrade" : "Switch"}</Button></form>
                   )}
                 </div>
               ))}
-              <p className="text-[11px] text-muted">Demo: switching tiers doesn&apos;t charge anything. Real billing would go through a payment provider such as Stripe.</p>
+              {demo && <p className="text-[11px] text-muted">Demo: switching tiers doesn&apos;t charge anything.</p>}
+              {live && <p className="text-[11px] text-muted">Billed monthly through Stripe. Switching between paid tiers is prorated; cancel any time in the billing portal.</p>}
+              {!demo && !live && <p className="text-[11px] text-muted">Online payments aren&apos;t available yet. Please check back soon.</p>}
             </div>
           </Card>
         </div>
