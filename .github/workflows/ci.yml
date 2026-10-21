@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Applies supabase/migrations. Services the app and tests don't use are skipped.
+      - name: Start local Supabase
+        run: supabase start -x studio,postgres-meta,edge-runtime,logflare,vector,imgproxy,realtime,storage-api,supavisor
+
+      # NEXT_PUBLIC_* values are inlined at build time, so this comes before the build.
+      # Stripe: no secret key (payments stay off); the billing tests sign their own
+      # webhooks with a fake secret that playwright.config.ts passes to the server.
+      - name: Write .env.local
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "INVITE_TOKEN_SECRET=$(openssl rand -hex 32)"
+            echo "QUBOOL_DEMO=on"
+            echo "STRIPE_WEBHOOK_SECRET=whsec_qubool_ci_tests"
+          } > .env.local
+
+      - run: npm run build
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: Playwright tests
+        run: npm test -- --reporter=github,html
+        env:
+          CI: "1"
+          PLAYWRIGHT_HTML_OPEN: never
+
+      - name: Upload Playwright report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
