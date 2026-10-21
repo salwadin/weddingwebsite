@@ -7,6 +7,7 @@ import { cn, islamicDate, longDate, time12 } from "@/lib/format";
 import { Badge, Button, Card, CardHeader, Checkbox, Field, PageHeader, Select, Textarea } from "@/components/ui";
 import { CopyButton, WhatsAppButton } from "@/components/dash/nav";
 import { InvitationPreview } from "@/components/dash/invitation-preview";
+import { emailEnabled } from "@/lib/email/resend";
 
 export default async function InvitationsPage({ searchParams }: { searchParams: Promise<{ event?: string; saved?: string; sent?: string }> }) {
   const sp = await searchParams;
@@ -31,6 +32,7 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
   }).length;
   const outbox = d.outbox.filter((m) => m.weddingId === w.id && (!m.householdId || households.some((h) => h.id === m.householdId))).slice(0, 25);
   const publicLink = `/w/${w.slug}/events/${e.id}`;
+  const delivering = emailEnabled();
 
   return (
     <>
@@ -41,7 +43,7 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
         ))}
       </div>
       {sp.saved && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-2.5 text-sm text-[#3f5238]">Design saved.</p>}
-      {sp.sent && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-2.5 text-sm text-[#3f5238]">{sp.sent} messages queued. See the outbox below. (Delivery is simulated in this demo.)</p>}
+      {sp.sent && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-2.5 text-sm text-[#3f5238]">{delivering ? `${sp.sent} messages sent. Email delivery shows in the outbox below; WhatsApp messages are ready to share.` : `${sp.sent} messages queued. See the outbox below. (Delivery is simulated in this demo.)`}</p>}
 
       <div className="grid gap-5 xl:grid-cols-[1fr_440px]">
         <div className="grid content-start gap-5">
@@ -98,7 +100,7 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
           </Card>
 
           <Card>
-            <CardHeader title="Outbox" description="Messages sent from Qubool. In this demo, nothing actually leaves your computer." />
+            <CardHeader title="Outbox" description={delivering ? "Messages sent from Qubool. Emails go out right away; bounced addresses are flagged in the guest list." : "Messages sent from Qubool. In this demo, nothing actually leaves your computer."} />
             <ul className="divide-y divide-line/70 text-sm">
               {outbox.length === 0 && <li className="px-5 py-5 text-muted">No messages yet.</li>}
               {outbox.map((m) => (
@@ -106,6 +108,9 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={m.channel === "whatsapp" ? "sage" : "neutral"}>{m.channel}</Badge>
                     <Badge tone="outline">{m.kind.replace(/_/g, " ")}</Badge>
+                    {delivering && m.channel === "email" && m.status && m.status !== "pending" && m.status !== "skipped" && (
+                      <Badge tone={m.status === "bounced" || m.status === "failed" || m.status === "complained" ? "rose" : "sage"} title={m.error}>{m.status}</Badge>
+                    )}
                     <span className="text-xs text-muted">to {m.to} · {new Date(m.createdAt).toLocaleString()}</span>
                   </div>
                   <p className="mt-1 font-medium">{m.subject}</p>

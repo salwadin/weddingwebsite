@@ -33,6 +33,7 @@ npm run dev
 Open http://localhost:3000. `QUBOOL_DEMO=on` (already in `.env.example`) turns on the demo switcher and the demo accounts on the sign-in page.
 
 - **Emails** (sign-up confirmation, password reset) don't leave your machine: open the local inbox at http://127.0.0.1:54324.
+- **Guest emails** (invitations, reminders, link re-sends) are only queued in **Dashboard → Invitations → Outbox** unless you set `RESEND_API_KEY` (see [Email](#email-resend)).
 - **Supabase Studio** (tables, auth users, SQL editor) is at http://127.0.0.1:54323.
 - **Start over:** `npm run seed` replaces the demo wedding; `npm run db:reset` rebuilds the whole database from the migrations and re-seeds. You can also use **Dashboard → Settings → Reset demo data**.
 
@@ -45,7 +46,7 @@ npx playwright install chromium   # once
 npm test                          # starts `npm run dev` if it isn't running
 ```
 
-`CI=1 npm test` runs against a production build instead (`npm run build` first). The billing tests post signed Stripe webhooks to `/api/stripe/webhook`; they don't need a Stripe account.
+`CI=1 npm test` runs against a production build instead (`npm run build` first). The billing tests post signed Stripe webhooks to `/api/stripe/webhook`; they don't need a Stripe account. The email tests run the server against a mock Resend API (`tests/resend-mock.ts`, port 3999) and post signed Resend webhooks; they don't need a Resend account. (If `npm test` reuses a dev server you started yourself, start it with the `RESEND_*` and `CRON_SECRET` values from `playwright.config.ts`.)
 
 ### Payments (Stripe test mode)
 
@@ -58,6 +59,42 @@ With `QUBOOL_DEMO=on`, plan and tier changes are instant and free. To try real C
    ```
 3. Restart `npm run dev`. As a couple, **Plan & Billing → Upgrade**; as a vendor, **Promotion → Upgrade**. Pay with card `4242 4242 4242 4242`, any future date and CVC.
 4. Cancelling a vendor subscription goes through Stripe's customer portal: enable it once under **Settings → Billing → Customer portal** in test mode.
+
+### Email (Resend)
+
+Invitations, RSVP reminders, save-the-dates, "find my invitation" link re-sends, collaborator invites and vendor inquiry notifications are all written to the `outbox` table first. When `RESEND_API_KEY` is set they're sent through [Resend](https://resend.com); without it (the default locally and in tests) nothing is sent and the rows stay `pending`.
+
+- **When it sends.** The server action that queues messages sends them straight away (`lib/email/deliver.ts`, up to 100 per Resend batch call). `/api/email/send` sends anything left over, such as rows put back after a Resend rate limit or outage; call it every few minutes with `Authorization: Bearer $CRON_SECRET` (see [Deploy](#deploy-to-vercel)). Only rows from the last 24 hours are sent automatically, so switching delivery on never flushes an old backlog.
+- **What it sends.** Each email is rebuilt from the database rather than from the outbox text: the household's email on file, its current invitation link (`NEXT_PUBLIC_SITE_URL` + `/i/<token>`), the couple's names. A row whose recipient isn't that household's address fails instead of sending. Templates are in `lib/email/templates.ts`. WhatsApp rows are never sent automatically; organizers share them from the dashboard.
+- **Statuses.** `outbox.status` goes `pending → sending → sent → delivered`, or `failed` (with `error`), `bounced` or `complained`. `provider_id` is Resend's email id.
+- **Bounces.** The Resend webhook (`/api/resend/webhook`, Svix signature checked with `RESEND_WEBHOOK_SECRET`) records delivery, and a bounce sets the household's delivery status to **bounced**, which the guest list shows.
+
+To try it locally, set `RESEND_API_KEY=re_…` in `.env.local` and restart `npm run dev`. With `EMAIL_FROM` unset, mail comes from `onboarding@resend.dev`, which Resend only delivers to your own Resend account's address, so give a test household that email (or Resend's test addresses `delivered@resend.dev` and `bounced@resend.dev`). For webhooks, expose your dev server with a tunnel (for example `ngrok http 3000`) and add `https://<tunnel>/api/resend/webhook` in Resend.
+
+#### Sending domain: SPF, DKIM and DMARC
+
+1. In Resend, **Domains → Add domain**. Use a subdomain such as `mail.example.com`, so mail reputation stays separate from your main domain.
+2. Add the records Resend shows at your DNS provider. They look like this (copy the exact values from Resend; the region in the MX host varies):
+
+   | Purpose | Type | Name | Value |
+   |---|---|---|---|
+   | DKIM | TXT | `resend._domainkey.mail` | `p=MIGfMA0…` (the public key Resend gives you) |
+   | SPF (bounce domain) | MX | `send.mail` | `feedback-smtp.us-east-1.amazonses.com`, priority 10 |
+   | SPF | TXT | `send.mail` | `v=spf1 include:amazonses.com ~all` |
+   | DMARC | TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:dmarc@example.com` |
+
+   Only one SPF record may exist per name; if `send.mail` already has one, merge the `include:`. DMARC is set once for the whole domain: start with `p=none`, read the reports for a couple of weeks, then move to `p=quarantine`.
+3. Click **Verify** in Resend, then set `EMAIL_FROM`, for example `Qubool <invitations@mail.example.com>`.
+
+#### Auth emails (Supabase custom SMTP through Resend)
+
+Supabase's built-in mailer is for testing only (a handful of emails an hour), so a live project sends its sign-up confirmations and password resets through Resend's SMTP server:
+
+1. In Supabase, **Authentication → SMTP Settings** (under **Emails**), turn on **Enable custom SMTP** and fill in: host `smtp.resend.com`, port `465`, username `resend`, password a Resend API key (a separate key with sending access only), sender email an address on your verified domain (for example `no-reply@mail.example.com`), sender name `Qubool`.
+2. In **Authentication → Emails → Templates**, paste `supabase/templates/confirmation.html` into **Confirm signup** and `supabase/templates/recovery.html` into **Reset password**, with the subjects from `supabase/config.toml`. Both link to `/auth/confirm`.
+3. In **Authentication → Rate Limits**, raise the email limit from its default to what you expect at launch.
+
+Local Supabase keeps using its own inbox (http://127.0.0.1:54324); `config.toml` leaves `[auth.email.smtp]` off.
 
 ### Test modes
 
@@ -107,9 +144,14 @@ GitHub Pages can't run this app because it needs a server. Vercel can, and it's 
 
 1. Go to [vercel.com](https://vercel.com), sign in with GitHub, and choose **Add New → Project**.
 2. Import `salwadin/weddingwebsite`, and leave the framework preset as **Next.js**.
-3. Under **Environment Variables**, add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL` (your Vercel URL), `INVITE_TOKEN_SECRET` (a long random value), `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` (and optionally the `STRIPE_PRICE_*` ids, see `.env.example`). Add `QUBOOL_DEMO=on` only for a demo deployment.
+3. Under **Environment Variables**, add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL` (your Vercel URL), `INVITE_TOKEN_SECRET` (a long random value), `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` (and optionally the `STRIPE_PRICE_*` ids, see `.env.example`), and `RESEND_API_KEY`, `EMAIL_FROM`, `RESEND_WEBHOOK_SECRET` and `CRON_SECRET` (a long random value) for email. Add `QUBOOL_DEMO=on` only for a demo deployment.
 4. In Stripe, **Developers → Webhooks → Add endpoint**: `https://<your-domain>/api/stripe/webhook`, with the events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `customer.subscription.created`, `customer.subscription.updated` and `customer.subscription.deleted`. Its signing secret is `STRIPE_WEBHOOK_SECRET`. Turn on the customer portal (**Settings → Billing → Customer portal**) so vendors can cancel.
-5. Click **Deploy**. Every push to `main` redeploys automatically.
+5. In Resend, verify your sending domain ([SPF, DKIM and DMARC](#sending-domain-spf-dkim-and-dmarc)), then **Webhooks → Add endpoint**: `https://<your-domain>/api/resend/webhook`, with the events `email.delivered`, `email.bounced`, `email.complained` and `email.failed`. Its signing secret is `RESEND_WEBHOOK_SECRET`.
+6. Schedule `/api/email/send` every 5–10 minutes to retry leftover email. Vercel Cron sends the `Authorization: Bearer $CRON_SECRET` header for you, but Hobby projects only run crons daily; on Hobby use any external scheduler instead (a GitHub Actions `schedule`, Supabase `pg_cron` + `pg_net`, or an uptime pinger):
+   ```bash
+   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<your-domain>/api/email/send
+   ```
+7. Click **Deploy**. Every push to `main` redeploys automatically.
 
 ## The sample wedding
 
@@ -164,6 +206,8 @@ app/
   vendor/                      Vendor portal (listing, inquiries, promotion)
   pricing/                     Couple plans
   api/stripe/webhook/          Stripe webhook: sets plans and vendor tiers
+  api/email/send/              Cron: sends pending outbox email (Bearer CRON_SECRET)
+  api/resend/webhook/          Resend webhook: delivery status and bounces
   dashboard/                   Organizer app
     page.tsx                   Per-event stats, discrepancies, budget, tasks, activity
     website/  events/  guests/  invitations/  rsvps/  outfits/  studio/  checklist/  budget/  vendors/  settings/  billing/
@@ -185,6 +229,7 @@ lib/
   plans.ts                     Couple plans, vendor tiers, feature gates, trial logic
   stripe.ts                    Stripe client, Checkout line items, price ids
   payments.ts                  Applies Checkout and subscription results (webhook + return page)
+  email/                       Resend delivery of the outbox, email templates, webhook signature check
   marketplace.ts               Vendor categories, tags, traditions
   studio-templates.ts          Floor plan & moodboard templates
   actions/                     Server actions (site, dashboard, auth, onboarding)
@@ -252,11 +297,11 @@ Qubool runs on Supabase: Postgres with Row Level Security for data, Supabase Aut
    supabase db push
    ```
 2. In **Authentication → URL Configuration**, set the Site URL to your domain and add `https://<your-domain>/**` to the redirect URLs.
-3. In **Authentication → Emails**, paste the templates from `supabase/templates/` (they link to `/auth/confirm`), keep **Confirm email** on, and set up custom SMTP (for example Resend) so emails come from your domain.
+3. In **Authentication → Emails**, paste the templates from `supabase/templates/` (they link to `/auth/confirm`), keep **Confirm email** on, and set up custom SMTP through Resend so emails come from your domain (see [Auth emails](#auth-emails-supabase-custom-smtp-through-resend)).
 4. Set the environment variables listed in [Deploy to Vercel](#deploy-to-vercel), including the live Stripe keys and the webhook endpoint described there. Generate a fresh `INVITE_TOKEN_SECRET`; keep it stable, because it derives every invitation link.
 5. Leave `QUBOOL_DEMO` unset in production, and only run `npm run seed` against a demo project.
 
-Still to do before a public launch: real email/WhatsApp delivery from the outbox (Resend), rate limiting on the guest RPCs at the edge, and more targeted queries in `lib/db.ts` (each dashboard page currently loads the whole wedding the organizer may see, which is fine at a few thousand guests).
+Still to do before a public launch: WhatsApp delivery from the outbox (email goes through Resend), rate limiting on the guest RPCs at the edge, and more targeted queries in `lib/db.ts` (each dashboard page currently loads the whole wedding the organizer may see, which is fine at a few thousand guests).
 
 ## Phases
 

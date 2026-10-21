@@ -1,13 +1,19 @@
 import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+import { RESEND_MOCK_URL } from "./tests/resend-mock";
 
 // Same settings as the app (Supabase URL/keys, INVITE_TOKEN_SECRET, QUBOOL_DEMO=on).
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 const PORT = Number(process.env.PORT ?? 3000);
 // tests/billing.spec.ts signs webhooks with this; the server it starts verifies with it.
-// (If you reuse a dev server you started yourself, give it the same STRIPE_WEBHOOK_SECRET.)
+// (If you reuse a dev server you started yourself, give it the same STRIPE_WEBHOOK_SECRET
+// and the Resend settings below.)
 process.env.STRIPE_WEBHOOK_SECRET ||= "whsec_qubool_local_tests";
+// Email goes to the mock Resend API in tests/resend-mock.ts (started by global-setup.ts);
+// tests/email.spec.ts signs Resend webhooks and calls the cron route with these.
+process.env.RESEND_WEBHOOK_SECRET ||= "whsec_" + Buffer.from("qubool-local-resend-webhook-secret").toString("base64");
+process.env.CRON_SECRET ||= "qubool-local-cron-secret";
 
 export default defineConfig({
   testDir: "tests",
@@ -25,6 +31,10 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { QUBOOL_DEMO: "on", STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET },
+    env: {
+      QUBOOL_DEMO: "on", STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+      RESEND_API_KEY: "re_test_mock", RESEND_API_URL: RESEND_MOCK_URL, EMAIL_FROM: "Qubool <invitations@qubool.test>",
+      RESEND_WEBHOOK_SECRET: process.env.RESEND_WEBHOOK_SECRET, CRON_SECRET: process.env.CRON_SECRET,
+    },
   },
 });
