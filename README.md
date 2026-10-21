@@ -56,6 +56,9 @@ npm test                          # starts `npm run dev` if it isn't running
 
 ### Payments (Stripe test mode)
 
+Refunds, disputes and fraud warnings are handled too. A full refund or a dispute on a wedding's plan payment takes that payment out of the plan calculation, so the wedding falls back to the best plan it has still paid for, or to Essentials. A dispute the business wins restores it. A partial refund keeps the plan. Early fraud warnings are only logged; refunding the charge in Stripe avoids a dispute fee. A dispute on a vendor's subscription payment cancels the subscription, and the listing returns to Basic. Each change appears in the wedding's activity log.
+
+
 With `QUBOOL_DEMO=on`, plan and tier changes are instant and free. To try real Checkout locally:
 
 1. In `.env.local`, set `QUBOOL_DEMO=off` (or remove it) and `STRIPE_SECRET_KEY=sk_test_…` from the [Stripe dashboard](https://dashboard.stripe.com/test/apikeys).
@@ -151,7 +154,7 @@ GitHub Pages can't run this app because it needs a server. Vercel can, and it's 
 1. Go to [vercel.com](https://vercel.com), sign in with GitHub, and choose **Add New → Project**.
 2. Import `salwadin/weddingwebsite`, and leave the framework preset as **Next.js**.
 3. Under **Environment Variables**, add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL` (your Vercel URL), `INVITE_TOKEN_SECRET` (a long random value), `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` (and optionally the `STRIPE_PRICE_*` ids, see `.env.example`), and `RESEND_API_KEY`, `EMAIL_FROM`, `RESEND_WEBHOOK_SECRET` and `CRON_SECRET` (a long random value) for email. Add `QUBOOL_DEMO=on` only for a demo deployment.
-4. In Stripe, **Developers → Webhooks → Add endpoint**: `https://<your-domain>/api/stripe/webhook`, with the events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `customer.subscription.created`, `customer.subscription.updated` and `customer.subscription.deleted`. Its signing secret is `STRIPE_WEBHOOK_SECRET`. Turn on the customer portal (**Settings → Billing → Customer portal**) so vendors can cancel.
+4. In Stripe, **Developers → Webhooks → Add endpoint**: `https://<your-domain>/api/stripe/webhook`, with the events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, and the risk events `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed` and `radar.early_fraud_warning.created`. Its signing secret is `STRIPE_WEBHOOK_SECRET`. Turn on the customer portal (**Settings → Billing → Customer portal**) so vendors can cancel.
 5. In Resend, verify your sending domain ([SPF, DKIM and DMARC](#sending-domain-spf-dkim-and-dmarc)), then **Webhooks → Add endpoint**: `https://<your-domain>/api/resend/webhook`, with the events `email.delivered`, `email.bounced`, `email.complained` and `email.failed`. Its signing secret is `RESEND_WEBHOOK_SECRET`.
 6. Schedule `/api/email/send` every 5–10 minutes to retry leftover email. Vercel Cron sends the `Authorization: Bearer $CRON_SECRET` header for you, but Hobby projects only run crons daily; on Hobby use any external scheduler instead (a GitHub Actions `schedule`, Supabase `pg_cron` + `pg_net`, or an uptime pinger):
    ```bash

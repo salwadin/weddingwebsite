@@ -74,5 +74,11 @@ export function tierOf(sub: Stripe.Subscription): ListingTier | undefined {
   return (Object.keys(LISTING_TIERS) as ListingTier[]).find((t) => t !== "basic" && LISTING_TIERS[t].price * 100 === price?.unit_amount);
 }
 
+/**
+ * Labels that tag each Checkout flow in the Stripe Dashboard (integration_identifier),
+ * so plan purchases and vendor promotions can be tracked and compared separately.
+ */
+export const CHECKOUT_LABEL = { plan: "qubool-wedding-plan-vlsjfbhh", tier: "qubool-vendor-tier-hawrebgg" } as const;
+
 /** Checkout sessions expire after an hour, so a "payment in progress" notice doesn't linger. */
 export const checkoutExpiry = () => Math.floor(Date.now() / 1000) + 60 * 60;

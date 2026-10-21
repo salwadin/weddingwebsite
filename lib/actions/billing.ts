@@ -6,7 +6,7 @@ import { audit, mutate } from "../db";
 import { requireOrg } from "../dashboard";
 import { siteUrl } from "../auth";
 import { PLAN_ORDER, PLANS } from "../plans";
-import { checkoutExpiry, paymentsEnabled, planLineItem, stripe, upgradePrice } from "../stripe";
+import { checkoutExpiry, paymentsEnabled, planLineItem, stripe, upgradePrice, CHECKOUT_LABEL } from "../stripe";
 import { demoEnabled } from "../supabase/env";
 import { adminClient } from "../supabase/server";
 import type { Plan } from "../types";
@@ -36,6 +36,7 @@ export async function changePlan(form: FormData) {
 
   const meta = { kind: "plan", wedding_id: w.id, plan, from_plan: w.plan, user_id: o.ctx.user.id, actor: o.ctx.user.name };
   const session = await stripe().checkout.sessions.create({
+    integration_identifier: CHECKOUT_LABEL.plan,
     mode: "payment",
     line_items: [planLineItem(plan, w.plan)],
     customer_email: o.ctx.user.email || undefined,
