@@ -197,6 +197,7 @@ function insertRow(key: TableKey, x: object): Row {
   const row = toRow(key, x);
   if (key === "tokens") row.token_hash = tokenHashHex((x as InviteToken).token);
   if (key === "audit") delete row.id;
+  if (key === "outbox") { delete row.status; delete row.sent_at; delete row.error; }   // delivery's columns, not the app's
   return row;
 }
 

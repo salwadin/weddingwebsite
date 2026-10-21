@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-import { GUEST_COOKIE, grantSiteAccess, guestToken } from "../auth";
+import { GUEST_COOKIE, grantSiteAccess, guestToken, siteUrl } from "../auth";
+import { deliverNow } from "../email/deliver";
 import { getSite } from "../site";
 import { adminClient, anonClient } from "../supabase/server";
 import { deriveToken } from "../tokens";
@@ -81,7 +82,7 @@ const normPhone = (s: string) => s.replace(/\D/g, "").slice(-10);
 /**
  * Guest verification: a guest who lost their link enters their email or phone.
  * We always respond the same way (no account enumeration) and deliver the link
- * only to the contact already on file (simulated in Dashboard → Invitations → Outbox).
+ * only to the contact already on file (by email through Resend; WhatsApp ones wait in Dashboard → Invitations → Outbox).
  *
  * This is the one guest path that uses the service role: matching a contact
  * means reading households, which the anon role can't, and the link itself is
@@ -107,8 +108,9 @@ export async function findInvitation(slug: string, _prev: FormState, form: FormD
   await admin.from("outbox").insert({
     wedding_id: w.id, channel: byEmail ? "email" : "whatsapp", recipient: byEmail ? h.email : h.phone, household_id: h.id,
     subject: `Your invitation from ${w.partner1} & ${w.partner2}`,
-    body: `Assalamu alaikum ${h.name}, here is your personal invitation link: /i/${deriveToken(t.id)}`, kind: "verification",
+    body: `Assalamu alaikum ${h.name}, here is your personal invitation link: ${await siteUrl(`/i/${deriveToken(t.id)}`)}`, kind: "verification",
   });
+  if (byEmail) await deliverNow({ weddingId: w.id, kind: "verification" });
   await admin.from("audit_log").insert({ wedding_id: w.id, actor: "Guest", action: "link_lookup", detail: `Invitation link re-sent to ${h.name}` });
   return done;
 }

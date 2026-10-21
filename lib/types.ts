@@ -255,8 +255,14 @@ export interface OutboxMessage {
   householdId?: string;
   subject: string;
   body: string;
-  kind: "invitation" | "reminder" | "save_the_date" | "verification";
+  kind: "invitation" | "reminder" | "save_the_date" | "verification" | "collaborator_invite" | "inquiry";
+  /** Reminders: the event they're about. */
+  eventId?: string;
   createdAt: string;
+  /** Set by delivery (lib/email/deliver.ts), never by the app's writes. */
+  status?: "pending" | "sending" | "sent" | "delivered" | "failed" | "bounced" | "complained" | "skipped";
+  sentAt?: string;
+  error?: string;
 }
 
 export interface AuditEntry {

@@ -58,7 +58,7 @@ export const TABLES: Record<TableKey, TableSpec> = {
       "cost", "paid", "dueDate", "pieces", "fittings", "notes"] },
   boards: { table: "boards", write: "upsert", lists: ["items"], fields: ["id", "weddingId", "eventId", "name", "kind", "items", "updatedAt"] },
   outbox: { table: "outbox", write: "append", rename: { to: "recipient" }, strings: ["subject", "body"],
-    fields: ["id", "weddingId", "channel", "to", "householdId", "subject", "body", "kind", "createdAt"] },
+    fields: ["id", "weddingId", "channel", "to", "householdId", "subject", "body", "kind", "eventId", "createdAt", "status", "sentAt", "error"] },
   // audit_log.id is an identity column: read back as a string, never sent.
   audit: { table: "audit_log", write: "append", strings: ["detail"], fields: ["weddingId", "at", "actor", "action", "detail"] },
   listings: { table: "listings", write: "readonly", strings: ["city", "tagline", "description"], lists: ["serves", "images", "tags", "traditions"],

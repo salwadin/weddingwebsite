@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { audit, mutate, newInviteToken, uid } from "../db";
+import { siteUrl } from "../auth";
+import { deliverNow } from "../email/deliver";
 import { canEditEvent, canTouchHousehold, type Area } from "../access";
 import { assertFeature, requireOrg, type Org } from "../dashboard";
 import { PLANS } from "../plans";
@@ -382,7 +384,7 @@ export async function saveDesign(form: FormData) {
   redirect(`/dashboard/invitations?event=${eventId}&saved=1`);
 }
 
-/** Queue messages to the outbox (simulated delivery). kind: invitation | reminder | save_the_date. */
+/** Queue messages to the outbox and send the email ones (lib/email/deliver.ts). kind: invitation | reminder | save_the_date. */
 export async function sendMessages(form: FormData) {
   const o = await edit("invitations");
   const kind = str(form, "kind") as "invitation" | "reminder" | "save_the_date";
@@ -400,22 +402,24 @@ export async function sendMessages(form: FormData) {
     });
   }
   targets = targets.filter((h) => (channel === "email" ? h.email : h.phone));
+  const base = await siteUrl("/");
   await mutate(o, (d) => {
     for (const h of targets) {
       const t = d.tokens.find((x) => x.householdId === h.id && !x.revokedAt);
       if (!t) continue;
-      const link = `/i/${t.token}`;
+      const link = new URL(`/i/${t.token}`, base).toString();
       const subject = kind === "save_the_date" ? `Save the date · ${w.partner1} & ${w.partner2}`
         : kind === "reminder" ? `Kind reminder to RSVP · ${e?.name ?? "our wedding"}` : `You're invited · ${w.partner1} & ${w.partner2}`;
       const body = kind === "reminder"
         ? `Assalamu alaikum ${h.name}, we'd love to know if you can join us for the ${e?.name}. Please reply here: ${link}?to=rsvp`
         : `Assalamu alaikum ${h.name}, ${kind === "save_the_date" ? "please save the date for" : "you are warmly invited to"} the wedding of ${w.partner1} & ${w.partner2}. Your personal invitation: ${link}`;
-      d.outbox.unshift({ id: uid("msg"), weddingId: w.id, channel, to: channel === "email" ? h.email! : h.phone!, householdId: h.id, subject, body, kind, createdAt: new Date().toISOString() });
+      d.outbox.unshift({ id: uid("msg"), weddingId: w.id, channel, to: channel === "email" ? h.email! : h.phone!, householdId: h.id, subject, body, kind, eventId: e?.id, createdAt: new Date().toISOString() });
       const hh = d.households.find((x) => x.id === h.id)!;
       if (kind === "invitation") hh.deliveryStatus = "sent";
     }
     audit(d, w.id, o.ctx.user.name, `send_${kind}`, `${targets.length} ${channel} messages${e ? ` · ${e.name}` : ""}`);
   });
+  if (channel === "email") await deliverNow({ weddingId: w.id });
   refresh(o);
   redirect(`/dashboard/invitations?event=${eventId}&sent=${targets.length}`);
 }
@@ -609,6 +613,7 @@ export async function inviteCollaborator(form: FormData) {
     p_relationship: str(form, "relationship", 80), p_event_ids: role === "event_organizer" ? form.getAll("eventIds").map(String) : null,
   });
   if (error) throw new Error(error.message);
+  await deliverNow({ weddingId: o.ctx.wedding.id, kind: "collaborator_invite" });
   refresh(o);
 }
 
