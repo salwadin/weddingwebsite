@@ -116,3 +116,30 @@ export function inquiryEmail(o: { subject: string; message: string; link: string
     footer: "You received this because your business is listed on the Qubool marketplace.",
   });
 }
+
+/** Founding Vendor approval. `subject` is set by the server (it carries the founding number). */
+export function foundingApprovedEmail(o: { subject: string; link: string }) {
+  return render({
+    subject: o.subject, eyebrow: "Qubool for vendors", heading: "You're in",
+    paragraphs: [
+      `${o.subject}.`,
+      "Your application has been approved. As one of our Founding 50, your listing is Featured free for 12 months: it appears above standard listings, with a Featured badge and monthly stats. After your free year you can keep Featured for $10/month, or stay on the free Basic listing.",
+      "Create your vendor account with this email address to set up your listing. Your founding benefits apply automatically.",
+    ],
+    cta: { label: "Set up your listing", url: o.link },
+    footer: "You received this because you applied to become a Qubool Founding Vendor.",
+  });
+}
+
+/** Beta invitation. */
+export function betaInviteEmail(o: { link: string }) {
+  return render({
+    subject: "You're invited to the Qubool beta", eyebrow: "Qubool beta", heading: "Your early access is ready",
+    paragraphs: [
+      "Thank you for applying. We'd love you to be one of the first to plan with Qubool: one place for every event, every guest list, and every family member helping out.",
+      "Sign up with this email address and your account gets complimentary full access, including the design studio, for as long as the beta runs. Tell us what works and what doesn't. You'll be helping shape Qubool.",
+    ],
+    cta: { label: "Create your account", url: o.link },
+    footer: "You received this because you applied to join the Qubool beta.",
+  });
+}

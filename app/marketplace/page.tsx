@@ -8,7 +8,7 @@ import { ButtonLink, Empty, Input, Select } from "@/components/ui";
 import { SiteHeader } from "@/components/site-header";
 import { ListingCard } from "@/components/market/listing-card";
 
-export const metadata = { title: "Wedding vendors", description: "Vendors who know Muslim and multicultural weddings." };
+export const metadata = { title: "Wedding vendors", description: "Wedding vendors who know multicultural, multi-day celebrations." };
 
 type SP = { q?: string; category?: string; city?: string; tradition?: string; tag?: string };
 
@@ -69,9 +69,9 @@ export default async function Marketplace({ searchParams }: { searchParams: Prom
           <section className="mb-12 rounded-3xl border border-line bg-white p-8 text-center sm:p-12">
             <p className="text-xs uppercase tracking-[0.28em] text-gold">Founding vendors</p>
             <h2 className="mx-auto mt-3 max-w-2xl font-serif text-4xl">The marketplace is opening. Be one of the first vendors couples find.</h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-muted">We&apos;re inviting caterers, photographers, henna artists, officiants, venues and designers who know Muslim and multicultural weddings. Listing is free.</p>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-muted">We&apos;re inviting caterers, photographers, henna artists, officiants, venues and designers who know multicultural, multi-day weddings. The first 50 approved vendors get 12 months of Featured listing free.</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <ButtonLink href="/for-vendors">List your business</ButtonLink>
+              <ButtonLink href="/founding-vendors">Become a Founding Vendor</ButtonLink>
               <ButtonLink href="/demo/marketplace" variant="outline" prefetch={false}>See a sample marketplace</ButtonLink>
             </div>
           </section>

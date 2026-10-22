@@ -78,6 +78,6 @@ export function requiredPlan(f: Feature) {
 
 export const LISTING_TIERS: Record<ListingTier, { name: string; price: number; perks: string[] }> = {
   basic: { name: "Basic listing", price: 0, perks: ["Profile with photos and contact details", "Appear in search and category pages", "Receive inquiries from couples"] },
-  featured: { name: "Featured", price: 49, perks: ["Everything in Basic", "Shown above basic listings in your category", "“Featured” badge", "Monthly views & inquiry stats"] },
-  spotlight: { name: "Spotlight", price: 149, perks: ["Everything in Featured", "Homepage & marketplace spotlight carousel", "Recommended inside couples' dashboards", "Top placement for your traditions and cities"] },
+  featured: { name: "Featured", price: 10, perks: ["Everything in Basic", "Shown above basic listings in your category", "“Featured” badge", "Monthly views & inquiry stats"] },
+  spotlight: { name: "Spotlight", price: 25, perks: ["Everything in Featured", "Homepage & marketplace spotlight carousel", "Recommended inside couples' dashboards", "Top placement for your traditions and cities"] },
 };

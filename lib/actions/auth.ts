@@ -1,6 +1,7 @@
 "use server";
 
 import { isDemoEmail } from "../demo";
+import { isStaffEmail } from "../staff";
 import { redirect } from "next/navigation";
 import { homeFor, siteUrl } from "../auth";
 import { serverClient } from "../supabase/server";
@@ -17,6 +18,7 @@ export async function login(_prev: FormState, form: FormData): Promise<FormState
     if (error.code === "email_not_confirmed") return { error: "Please confirm your email first. We sent you a link when you signed up." };
     return { error: "Email or password is incorrect." };
   }
+  if (isStaffEmail(data.user.email)) redirect("/admin");
   redirect(await homeFor(data.user.id));
 }
 

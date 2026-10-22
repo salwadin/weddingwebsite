@@ -65,5 +65,5 @@ export async function loginAs(page: import("@playwright/test").Page, email: stri
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(DEMO_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/(dashboard|vendor|onboarding)/);
+  await page.waitForURL(/\/(dashboard|vendor|onboarding|admin)/);
 }

@@ -6,3 +6,6 @@ next-env.d.ts
 /test-results
 /playwright-report
 /playwright/.cache
+
+# old pre-Supabase local data store
+/data/

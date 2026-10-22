@@ -198,7 +198,7 @@ That's 163 households (477 people) with realistic RSVPs, a seating sample, 12 ve
 
 New weddings get every Signature feature for 14 days. Limits only block *adding* events or guests, so nothing is ever removed. Features are checked on the server (`lib/plans.ts` → `assertFeature`) as well as in the UI.
 
-Vendors list for free. **Featured** ($49/mo) and **Spotlight** ($149/mo) rank higher in search, add a badge, and appear as "Recommended" inside couples' dashboards (labelled as sponsored).
+Vendors list for free. **Featured** ($10/mo) and **Spotlight** ($25/mo) rank higher in search, add a badge, and appear as "Recommended" inside couples' dashboards (labelled as sponsored).
 
 Payments go through **Stripe Checkout**: plans are a one-time payment per wedding (upgrading from Plus to Signature costs the $200 difference), vendor tiers are monthly subscriptions that vendors switch in place (prorated) and cancel in Stripe's customer portal. Organizers and vendors can't write `plan`, `trial_ends_at` or `tier` themselves (column-level grants): the webhook (`app/api/stripe/webhook`) sets them with the service role once Stripe confirms payment, and returns a listing to Basic when its subscription ends. It records every event id in `stripe_events`, so redeliveries are ignored. The `payments` and `subscriptions` tables are readable by the wedding's administrators and the listing's owner. When a buyer returns from Checkout, the billing page also confirms the session directly, so the new plan shows even if the webhook is a few seconds behind.
 

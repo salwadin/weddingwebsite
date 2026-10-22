@@ -109,9 +109,9 @@ export async function updateListing(form: FormData) {
   redirect("/vendor?saved=1#listing");
 }
 
-export async function setInquiryStatus(form: FormData) {
+/** `status` is bound per button ("Mark replied" etc.); a button's own name/value isn't submitted with server actions. */
+export async function setInquiryStatus(status: Inquiry["status"], form: FormData) {
   const { sb, l } = await myListing();
-  const status = str(form, "status") as Inquiry["status"];
   if (!["new", "replied", "booked", "closed"].includes(status)) return;
   const { error } = await sb.from("inquiries").update({ status }).eq("id", str(form, "id")).eq("listing_id", l.id);
   if (error) throw new Error(error.message);

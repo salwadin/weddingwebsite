@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Check } from "lucide-react";
 import { vendorSignup } from "@/lib/actions/marketplace";
 import { LISTING_TIERS } from "@/lib/plans";
@@ -17,8 +18,12 @@ export default function ForVendors() {
             <p className="text-xs uppercase tracking-[0.28em] text-gold">For wedding businesses</p>
             <h1 className="mt-4 font-serif text-5xl leading-tight sm:text-6xl">Get booked for every event of the week</h1>
             <p className="mt-5 max-w-lg text-lg leading-relaxed text-muted">
-              Couples on Qubool plan multi-day Muslim and multicultural weddings with three to five events each. Show them you know their traditions, from halal menus and female teams to separate sections and sofreh spreads.
+              Couples on Qubool plan multi-day, multi-event celebrations: welcome dinners, henna nights, ceremonies, receptions and more. Show them you know their traditions, from halal menus and tea ceremonies to chuppahs, sofreh spreads and female teams.
             </p>
+            <Link href="/founding-vendors" className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-gold/40 bg-gold-soft/40 p-4 text-sm hover:bg-gold-soft/60">
+              <span><b className="block font-serif text-xl font-normal">The Founding 50</b>The first 50 approved vendors get 12 months of Featured listing free.</span>
+              <span className="shrink-0 font-medium underline">Apply</span>
+            </Link>
             <ul className="mt-6 space-y-2 text-sm">
               {["Free listing with photos, services and the traditions you know", "Inquiries arrive with the couple's date, events and guest count", "Couples can save you straight into their planning dashboard"].map((t) => (
                 <li key={t} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-sage" />{t}</li>

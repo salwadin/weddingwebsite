@@ -34,7 +34,7 @@ export default async function SettingsPage() {
               const self = c.userId === ctx.user.id;
               return (
                 <li key={c.id} className="px-5 py-4">
-                  <form action={updateCollaborator} className="flex flex-wrap items-center gap-3">
+                  <form action={updateCollaborator.bind(null, "update")} className="flex flex-wrap items-center gap-3">
                     <input type="hidden" name="id" value={c.id} />
                     <div className="min-w-48 flex-1">
                       <p className="font-medium">{u?.name} {self && <Badge tone="outline">you</Badge>}</p>
@@ -45,7 +45,7 @@ export default async function SettingsPage() {
                         <Select name="role" defaultValue={c.role} className="h-9 w-52 text-xs">{Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>
                         {c.role === "event_organizer" && <span className="flex gap-2 text-xs">{events.map((e) => <label key={e.id} className="flex items-center gap-1"><Checkbox name="eventIds" value={e.id} defaultChecked={c.eventIds?.includes(e.id)} />{e.name}</label>)}</span>}
                         <Button size="sm" variant="outline">Update</Button>
-                        <button name="remove" value="1" className="text-xs text-muted hover:text-[#9b4d47]">Remove</button>
+                        <button formAction={updateCollaborator.bind(null, "remove")} className="text-xs text-muted hover:text-[#9b4d47]">Remove</button>
                       </>
                     )}
                   </form>

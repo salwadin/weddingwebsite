@@ -10,8 +10,8 @@ const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfa
 const marcellus = Marcellus({ subsets: ["latin"], weight: "400", variable: "--font-marcellus-v" });
 
 export const metadata: Metadata = {
-  title: { default: "Qubool · Planning for Muslim & multicultural weddings", template: "%s · Qubool" },
-  description: "One wedding, every celebration: private multi-event websites, RSVPs, outfits, floor plans and vendors.",
+  title: { default: "Qubool · One Wedding. Every Celebration.", template: "%s · Qubool" },
+  description: "The all-in-one planning platform for multicultural, multi-day and multi-event weddings: personalized invitations, family collaboration, budgets, design and vendors.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

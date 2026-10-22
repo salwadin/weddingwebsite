@@ -1,5 +1,8 @@
 "use server";
 
+import { TRADITIONS } from "../format";
+import { DEFAULT_HERO } from "../photos";
+import { applyBetaPerks } from "../programs";
 import { redirect } from "next/navigation";
 import { currentUser, organizerContext } from "../auth";
 import { audit, loadWedding, loadWeddingRow, mutate, newInviteToken, uid } from "../db";
@@ -29,28 +32,35 @@ export async function createWedding(input: OnboardingInput): Promise<{ error?: s
   // The wedding row and the caller's admin role are created together in the database
   // (create_wedding() picks a free slug and sets the plan + trial); everything else is
   // then written as that new administrator, through RLS like any other dashboard change.
+  const islamic = !!TRADITIONS.find((t) => t.value === input.tradition)?.islamic;
   const sb = await serverClient();
   const { data: created, error } = await sb.rpc("create_wedding", { p: {
     slug, partner1: clean(input.partner1), partner2: clean(input.partner2),
     partner1Family: clean(input.partner1Family), partner2Family: clean(input.partner2Family),
     relationship: input.role === "groom" ? "Groom" : "Bride",
-    tagline: "Two families, one beginning, Insha'Allah.",
-    heroImage: "https://images.unsplash.com/photo-1587271407850-8d438ca9fdf2?w=2000&q=80",
-    story: [], gallery: [], faqs: [
+    tagline: islamic ? "Two families, one beginning, Insha'Allah." : "Two families, one beginning.",
+    heroImage: DEFAULT_HERO,
+    story: [], gallery: [], faqs: islamic ? [
       { q: "Will there be space for prayer?", a: "Yes, there will be a dedicated prayer space at each venue." },
       { q: "Is the food halal?", a: "Yes, all food served is halal." },
+    ] : [
+      { q: "Is there parking at the venues?", a: "Details for each venue are listed on the Events page." },
+      { q: "Can I bring my children?", a: "Please refer to the names listed on your personal invitation." },
     ],
-    travel: { intro: "", airport: "", hotels: [] }, registry: { message: "Your duas and presence are the greatest gift.", links: [] },
+    travel: { intro: "", airport: "", hotels: [] }, registry: { message: islamic ? "Your duas and presence are the greatest gift." : "Your presence is the greatest gift.", links: [] },
     theme: { id: (["noor", "gulab", "zaitoon", "mehtab"] as const).includes(input.theme) ? input.theme : "noor", heading: "cormorant", pattern: "arch" } satisfies ThemeSettings,
     culture: {
-      showBismillah: true, islamicDates: true,
-      verse: { enabled: true, arabic: "وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً", translation: "And among His signs is that He created for you mates from among yourselves, that you may find tranquility in them; and He placed between you affection and mercy.", reference: "Surah Ar-Rum 30:21" },
-      urduNames: { partner1: "", partner2: "" }, halalNote: "All food served is halal.", modestyNote: "We kindly ask guests to dress modestly.", prayerNote: "Prayer space will be available.",
+      // Islamic touches are on for Muslim traditions and off otherwise; couples can change them in Website settings.
+      showBismillah: islamic, islamicDates: islamic,
+      verse: { enabled: islamic, arabic: "وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً", translation: "And among His signs is that He created for you mates from among yourselves, that you may find tranquility in them; and He placed between you affection and mercy.", reference: "Surah Ar-Rum 30:21" },
+      urduNames: { partner1: "", partner2: "" },
+      halalNote: islamic ? "All food served is halal." : "", modestyNote: islamic ? "We kindly ask guests to dress modestly." : "", prayerNote: islamic ? "Prayer space will be available." : "",
     },
     published: !!input.publish, totalBudget: 50000, currency: "USD", tradition: clean(input.tradition ?? "", 30) || null,
   } });
   if (error) return { error: error.message.includes("already") ? "You're already planning a wedding." : "We couldn't create your wedding. Please try again." };
   const W = (created as { id: string }).id;
+  await applyBetaPerks(user.email, W); // invited beta couples and planners get complimentary access
   const wedding = await loadWeddingRow(sb, W);
   if (!wedding) return { error: "We couldn't create your wedding. Please try again." };
   const o = { sb, d: await loadWedding(sb, wedding) };

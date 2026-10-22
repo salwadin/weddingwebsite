@@ -624,12 +624,13 @@ export async function cancelInvite(form: FormData) {
   refresh(o);
 }
 
-export async function updateCollaborator(form: FormData) {
+/** `op` is bound per button: "update" (the form's default) or "remove". */
+export async function updateCollaborator(op: "update" | "remove", form: FormData) {
   const o = await edit("settings");
   await mutate(o, (d) => {
     const c = d.collaborators.find((x) => x.id === str(form, "id") && x.weddingId === o.ctx.wedding.id);
     if (!c || c.userId === o.ctx.user.id) return; // can't demote yourself
-    if (form.get("remove")) { d.collaborators = d.collaborators.filter((x) => x !== c); audit(d, o.ctx.wedding.id, o.ctx.user.name, "collaborator_remove", c.relationship); return; }
+    if (op === "remove") { d.collaborators = d.collaborators.filter((x) => x !== c); audit(d, o.ctx.wedding.id, o.ctx.user.name, "collaborator_remove", c.relationship); return; }
     c.role = str(form, "role") as Role;
     c.eventIds = c.role === "event_organizer" ? form.getAll("eventIds").map(String) : undefined;
     audit(d, o.ctx.wedding.id, o.ctx.user.name, "collaborator_role", `${c.relationship} → ${c.role}`);
