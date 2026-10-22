@@ -32,7 +32,17 @@ npm run seed            # Ayesha & Omar's wedding, the demo accounts and the mar
 npm run dev
 ```
 
-Open http://localhost:3000. `QUBOOL_DEMO=on` (already in `.env.example`) turns on the demo switcher and the demo accounts on the sign-in page.
+Open http://localhost:3000. `QUBOOL_DEMO=on` (already in `.env.example`) turns on the interactive demo: the demo switcher, the demo accounts on the sign-in page, and the sample marketplace vendors for demo visitors.
+
+### The demo is sealed off from the real site
+
+The demo (Ayesha & Omar, the sample vendors, the Noor Light Studios vendor portal) can stay on in production next to real couples and vendors:
+
+- **Sample vendors** (`listings.is_demo`) appear only for demo visitors: anyone who entered through a demo button (`/demo/*`), or is signed in to a demo account. `/demo/exit` leaves the demo. Real visitors see only real vendors, and a "Founding vendors" invitation while there are none.
+- **Payments:** the demo wedding and demo vendor change plans and tiers instantly for free. Every other wedding and vendor pays through Stripe.
+- **No email** ever leaves the demo: outbox rows from the demo wedding or to `example.com` addresses are marked `skipped` (`lib/demo-rules.ts`).
+- **No custom domain or password changes** for the shared demo accounts.
+- **Nightly reset:** Vercel Cron calls `/api/demo/reset` (see `vercel.json`) with `CRON_SECRET`, restoring the demo wedding, the sample vendors and the demo passwords.
 
 - **Emails** (sign-up confirmation, password reset) don't leave your machine: open the local inbox at http://127.0.0.1:54324.
 - **Guest emails** (invitations, reminders, link re-sends) are only queued in **Dashboard → Invitations → Outbox** unless you set `RESEND_API_KEY` (see [Email](#email-resend)).
@@ -59,9 +69,9 @@ npm test                          # starts `npm run dev` if it isn't running
 Refunds, disputes and fraud warnings are handled too. A full refund or a dispute on a wedding's plan payment takes that payment out of the plan calculation, so the wedding falls back to the best plan it has still paid for, or to Essentials. A dispute the business wins restores it. A partial refund keeps the plan. Early fraud warnings are only logged; refunding the charge in Stripe avoids a dispute fee. A dispute on a vendor's subscription payment cancels the subscription, and the listing returns to Basic. Each change appears in the wedding's activity log.
 
 
-With `QUBOOL_DEMO=on`, plan and tier changes are instant and free. To try real Checkout locally:
+The demo wedding and demo vendor always change plans instantly for free. To try real Checkout locally, sign up as a new couple or vendor:
 
-1. In `.env.local`, set `QUBOOL_DEMO=off` (or remove it) and `STRIPE_SECRET_KEY=sk_test_…` from the [Stripe dashboard](https://dashboard.stripe.com/test/apikeys).
+1. In `.env.local`, set `STRIPE_SECRET_KEY=sk_test_…` (or a restricted `rk_test_…` key) from the [Stripe dashboard](https://dashboard.stripe.com/test/apikeys).
 2. Forward webhooks to the app with the [Stripe CLI](https://docs.stripe.com/stripe-cli) and put the `whsec_…` it prints in `STRIPE_WEBHOOK_SECRET`:
    ```bash
    stripe listen --forward-to localhost:3000/api/stripe/webhook
@@ -192,7 +202,7 @@ Vendors list for free. **Featured** ($49/mo) and **Spotlight** ($149/mo) rank hi
 
 Payments go through **Stripe Checkout**: plans are a one-time payment per wedding (upgrading from Plus to Signature costs the $200 difference), vendor tiers are monthly subscriptions that vendors switch in place (prorated) and cancel in Stripe's customer portal. Organizers and vendors can't write `plan`, `trial_ends_at` or `tier` themselves (column-level grants): the webhook (`app/api/stripe/webhook`) sets them with the service role once Stripe confirms payment, and returns a listing to Basic when its subscription ends. It records every event id in `stripe_events`, so redeliveries are ignored. The `payments` and `subscriptions` tables are readable by the wedding's administrators and the listing's owner. When a buyer returns from Checkout, the billing page also confirms the session directly, so the new plan shows even if the webhook is a few seconds behind.
 
-When `QUBOOL_DEMO=on`, plan and tier changes are **simulated** instead: instant, and nothing is charged.
+For the demo wedding and demo vendor only, plan and tier changes are **simulated**: instant, and nothing is charged.
 
 ## Project structure
 
@@ -308,7 +318,7 @@ Qubool runs on Supabase: Postgres with Row Level Security for data, Supabase Aut
 2. In **Authentication → URL Configuration**, set the Site URL to your domain and add `https://<your-domain>/**` to the redirect URLs.
 3. In **Authentication → Emails**, paste the templates from `supabase/templates/` (they link to `/auth/confirm`), keep **Confirm email** on, and set up custom SMTP through Resend so emails come from your domain (see [Auth emails](#auth-emails-supabase-custom-smtp-through-resend)).
 4. Set the environment variables listed in [Deploy to Vercel](#deploy-to-vercel), including the live Stripe keys and the webhook endpoint described there. Generate a fresh `INVITE_TOKEN_SECRET`; keep it stable, because it derives every invitation link.
-5. Leave `QUBOOL_DEMO` unset in production, and only run `npm run seed` against a demo project.
+5. `QUBOOL_DEMO=on` is safe in production: the demo is sealed off from real data (see above). Set `CRON_SECRET` so the nightly demo reset runs.
 
 Still to do before a public launch: WhatsApp delivery from the outbox (email goes through Resend), rate limiting on the guest RPCs at the edge, and more targeted queries in `lib/db.ts` (each dashboard page currently loads the whole wedding the organizer may see, which is fine at a few thousand guests).
 

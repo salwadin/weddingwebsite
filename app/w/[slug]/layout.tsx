@@ -6,6 +6,7 @@ import { forgetInvitation, unlockSite } from "@/lib/actions/site";
 import { SiteNav, PasswordGate } from "@/components/site/client";
 import { Bismillah, Ornament } from "@/components/site/parts";
 import { DemoBar } from "@/components/demo-bar";
+import { isDemoWedding } from "@/lib/demo";
 
 const HEADING: Record<string, string> = {
   cormorant: "var(--font-serif)", playfair: "var(--font-playfair)", marcellus: "var(--font-marcellus)",
@@ -42,7 +43,7 @@ export default async function SiteLayout({ children, params }: { children: React
           <p className="text-sm text-[var(--site-muted)]">This website is password protected. Please enter the password from your invitation, or open your personal invitation link.</p>
           <PasswordGate action={unlockSite.bind(null, slug)} />
         </div>
-        <DemoBar current={current} />
+        {isDemoWedding(w.id) && <DemoBar current={current} />}
       </div>
     );
   }
@@ -85,7 +86,7 @@ export default async function SiteLayout({ children, params }: { children: React
         <Ornament className="my-4" />
         {site.showBranding && <p className="text-xs text-[var(--site-muted)]">Made with love on <Link href="/" className="underline underline-offset-2">Qubool</Link></p>}
       </footer>
-      <DemoBar current={current} />
+      {isDemoWedding(w.id) && <DemoBar current={current} />}
     </div>
   );
 }

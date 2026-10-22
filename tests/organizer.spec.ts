@@ -142,6 +142,9 @@ test("vendors edit their listing and receive inquiries from the marketplace", as
   const { data: l } = await admin.from("listings").select("id,name,views").eq("name", "Noor Light Studios").single();
 
   const couple = await (await browser.newContext()).newPage(); // not signed in
+  // Noor Light is a sample vendor: only visible inside the demo.
+  expect((await couple.goto(`/marketplace/${l!.id}`))!.status()).toBe(404);
+  await couple.goto("/demo/marketplace");
   await couple.goto(`/marketplace/${l!.id}`);
   await couple.getByLabel("Your name").fill("Amina Test");
   await couple.getByLabel("Email").fill("amina.test@example.com");

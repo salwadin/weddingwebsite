@@ -56,7 +56,8 @@ export async function loadDemoSeed(admin: SupabaseClient, log: (msg: string) => 
   const rows = (key: TableKey, extra?: (x: any, r: Row) => void) =>
     (d[key] as object[]).map((x) => { const r = toRow(key, x); extra?.(x, r); return r; });
 
-  await insert(admin, "listings", rows("listings", (x, r) => { r.owner_user_id = user(x.ownerUserId) ?? null; }));
+  // Sample vendors exist only inside the demo (the public marketplace hides is_demo listings).
+  await insert(admin, "listings", rows("listings", (x, r) => { r.owner_user_id = user(x.ownerUserId) ?? null; r.is_demo = true; }));
   await insert(admin, "weddings", d.weddings.map((w) => weddingToRow(w)));
   await insert(admin, "wedding_private", d.weddings.map((w) => ({ wedding_id: w.id, mahr_amount: w.mahr?.amount ?? null, mahr_notes: w.mahr?.notes ?? null })));
   await insert(admin, "wedding_collaborators", rows("collaborators", (x, r) => { r.user_id = user(x.userId); }));

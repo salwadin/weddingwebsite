@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { siteUrl } from "../auth";
 import { adminClient, type Supabase } from "../supabase/server";
 import { deriveToken } from "../tokens";
+import { DEMO_WEDDING_ID } from "../seed";
+import { isDemoOutboxRow } from "../demo-rules";
 import { emailEnabled, sendBatch, type OutgoingEmail } from "./resend";
 import {
   collaboratorInviteEmail, inquiryEmail, invitationEmail, linkResendEmail, reminderEmail, saveTheDateEmail, type Email,
@@ -64,7 +66,18 @@ async function deliverChunk(admin: Supabase, ids: string[], origin: string): Pro
   // Claim the rows: only one concurrent caller wins each one.
   const { data: claimed, error } = await admin.from("outbox").update({ status: "sending" }).in("id", ids).eq("status", "pending").select("*");
   if (error) throw new Error(`outbox: ${error.message}`);
-  const rows = (claimed ?? []) as OutboxRow[];
+  const claimedRows = (claimed ?? []) as OutboxRow[];
+  if (!claimedRows.length) return result;
+
+  // The interactive demo never emails anyone: not from the demo wedding (visitors can type
+  // any address into it), and not to the sample vendors' and guests' example.com addresses.
+  // (The end-to-end email tests send through the demo on purpose: QUBOOL_EMAIL_DEMO_ROWS=send, tests only.)
+  const isDemoRow = (r: OutboxRow) => process.env.QUBOOL_EMAIL_DEMO_ROWS !== "send" && isDemoOutboxRow(r, DEMO_WEDDING_ID);
+  const demoRows = claimedRows.filter(isDemoRow);
+  if (demoRows.length) {
+    await admin.from("outbox").update({ status: "skipped", error: "Demo: not sent" }).in("id", demoRows.map((r) => r.id));
+  }
+  const rows = claimedRows.filter((r) => !isDemoRow(r));
   if (!rows.length) return result;
 
   const ctx = await loadContext(admin, rows);

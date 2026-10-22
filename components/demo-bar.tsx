@@ -31,6 +31,10 @@ export function DemoBar({ current }: { current: string }) {
             </Link>
           ))}
         </div>
+        <div className="flex items-center justify-between gap-3 border-t border-[#e7ddcd] px-4 py-2 text-[11px] text-[#7b7166]">
+          <span>Sample data. Payments, emails and domains are switched off, and the demo resets every night.</span>
+          <Link href="/demo/exit" prefetch={false} className="shrink-0 font-semibold text-[#2b2620] underline">Exit demo</Link>
+        </div>
       </details>
     </div>
   );

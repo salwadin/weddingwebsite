@@ -1,4 +1,5 @@
 import "server-only";
+import { DEMO_WEDDING_ID } from "./seed";
 import { randomUUID } from "node:crypto";
 import { columns, fromRow, TABLES, toRow, weddingFromRow, weddingToRow, WEDDING_UPDATABLE, type Row, type TableKey } from "./rows";
 import { deriveToken, tokenHashHex } from "./tokens";
@@ -57,7 +58,8 @@ export async function loadWedding(sb: Supabase, wedding: Wedding): Promise<Datab
     fetchAll(sb, "tokens", byWedding),
     sb.from("collaborator_invites").select("id,wedding_id,email,name,role,relationship,created_at").eq("wedding_id", W),
     // Promoted marketplace vendors, for recommendations on the Vendors page.
-    fetchAll(sb, "listings", (q) => q.eq("published", true).neq("tier", "basic"), "id", 60),
+    // Real weddings only see real vendors; the demo wedding may also see the sample ones.
+    fetchAll(sb, "listings", (q) => { const p = q.eq("published", true).neq("tier", "basic"); return W === DEMO_WEDDING_ID ? p : p.eq("is_demo", false); }, "id", 60),
   ]);
 
   const events = rowsOf("events", eventRows).sort((a, b) => a.date.localeCompare(b.date) || a.sortOrder - b.sortOrder);
