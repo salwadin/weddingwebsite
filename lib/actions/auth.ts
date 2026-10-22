@@ -1,5 +1,6 @@
 "use server";
 
+import { isDemoEmail } from "../demo";
 import { redirect } from "next/navigation";
 import { homeFor, siteUrl } from "../auth";
 import { serverClient } from "../supabase/server";
@@ -39,6 +40,7 @@ export async function signup(_prev: FormState, form: FormData): Promise<FormStat
 export async function requestPasswordReset(_prev: FormState, form: FormData): Promise<FormState> {
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   if (!isEmail(email)) return { error: "Please enter a valid email." };
+  if (isDemoEmail(email)) return { error: "Demo accounts can't be reset. Use the demo buttons on the home page instead." };
   const sb = await serverClient();
   await sb.auth.resetPasswordForEmail(email, { redirectTo: await siteUrl("/auth/confirm?next=/reset-password") });
   return { ok: true, message: "If there's an account for that email, we've sent a link to reset your password." };
@@ -51,6 +53,7 @@ export async function updatePassword(_prev: FormState, form: FormData): Promise<
   const sb = await serverClient();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return { error: "This reset link has expired. Please request a new one." };
+  if (isDemoEmail(user.email)) return { error: "The shared demo accounts' passwords can't be changed." };
   const { error } = await sb.auth.updateUser({ password });
   if (error) return { error: error.code === "same_password" ? "Please choose a password you haven't used here before." : "We couldn't update your password. Please try again." };
   redirect(await homeFor(user.id));

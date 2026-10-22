@@ -1,5 +1,6 @@
 "use server";
 
+import { isDemoEmail, isDemoWedding } from "../demo";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { currentUser, organizerContext, siteUrl } from "../auth";
@@ -10,7 +11,6 @@ import { syncSubscription } from "../payments";
 import { LISTING_TIERS } from "../plans";
 import { fromRow, type Row } from "../rows";
 import { checkoutExpiry, paymentsEnabled, stripe, tierItemPrice, tierLineItem, CHECKOUT_LABEL } from "../stripe";
-import { demoEnabled } from "../supabase/env";
 import { adminClient, anonClient, serverClient } from "../supabase/server";
 import type { Inquiry, Listing, ListingTier } from "../types";
 import type { FormState } from "./site";
@@ -44,6 +44,8 @@ export async function saveToMyVendors(form: FormData) {
   const o = await requireOrg("vendors", "edit");
   const { data } = await o.sb.from("listings").select("*").eq("id", str(form, "listingId")).eq("published", true).maybeSingle();
   if (!data) throw new Error("Unknown vendor");
+  // Sample vendors can be saved only into the demo wedding.
+  if ((data as Row).is_demo && !isDemoWedding(o.ctx.wedding.id)) throw new Error("Sample vendors can't be added to a real wedding.");
   const l = fromRow("listings", data as Row);
   await mutate(o, (d) => {
     if (d.vendors.some((v) => v.weddingId === o.ctx.wedding.id && v.listingId === l.id)) return;
@@ -122,13 +124,13 @@ export async function setInquiryStatus(form: FormData) {
  * price in place, and cancelling happens in the Stripe customer portal. The
  * webhook (or the returned subscription) sets `tier`; vendors can't (column grant).
  *
- * Demo (QUBOOL_DEMO=on): switches the tier immediately without charging.
+ * The demo vendor: switches the tier immediately without charging. Real vendors pay.
  */
 export async function changeListingTier(form: FormData) {
   const { user, sb, l } = await myListing();
   const tier = str(form, "tier") as ListingTier;
   if (!["basic", "featured", "spotlight"].includes(tier)) return;
-  if (demoEnabled()) {
+  if (isDemoEmail(user.email)) {
     const { error } = await adminClient().from("listings").update({ tier }).eq("id", l.id);
     if (error) throw new Error(error.message);
     revalidatePath("/vendor"); revalidatePath("/marketplace", "layout");

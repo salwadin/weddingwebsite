@@ -1,5 +1,6 @@
 "use server";
 
+import { isDemoWedding } from "../demo";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { audit, mutate } from "../db";
@@ -7,7 +8,6 @@ import { requireOrg } from "../dashboard";
 import { siteUrl } from "../auth";
 import { PLAN_ORDER, PLANS } from "../plans";
 import { checkoutExpiry, paymentsEnabled, planLineItem, stripe, upgradePrice, CHECKOUT_LABEL } from "../stripe";
-import { demoEnabled } from "../supabase/env";
 import { adminClient } from "../supabase/server";
 import type { Plan } from "../types";
 
@@ -16,15 +16,15 @@ import type { Plan } from "../types";
  * per wedding; upgrading from Plus costs the difference) and the webhook sets
  * the plan once it's paid. Organizers can't write `plan` themselves (column grant).
  *
- * Demo (QUBOOL_DEMO=on): changes the plan immediately with the service role,
- * after the billing permission check, without taking payment.
+ * The demo wedding: changes the plan immediately with the service role, after
+ * the billing permission check, without taking payment. Every other wedding pays.
  */
 export async function changePlan(form: FormData) {
   const o = await requireOrg("billing", "edit");
   const w = o.ctx.wedding;
   const plan = String(form.get("plan")) as Plan;
   if (!(plan in PLANS)) return;
-  if (demoEnabled()) {
+  if (isDemoWedding(w.id)) {
     const { error } = await adminClient().from("weddings").update({ plan, trial_ends_at: null }).eq("id", w.id);
     if (error) throw new Error(error.message);
     await mutate(o, (d) => audit(d, w.id, o.ctx.user.name, "plan_change", `Plan → ${PLANS[plan].name}`));
@@ -57,6 +57,7 @@ export async function changePlan(form: FormData) {
 
 export async function saveCustomDomain(form: FormData) {
   const o = await requireOrg("billing", "edit");
+  if (isDemoWedding(o.ctx.wedding.id)) return; // the shared demo can't claim a real domain
   const domain = String(form.get("domain") ?? "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
   if (domain && !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain)) return;
   await mutate(o, (d) => { d.weddings.find((x) => x.id === o.ctx.wedding.id)!.customDomain = domain || undefined; });

@@ -1,10 +1,10 @@
+import { isDemoWedding } from "@/lib/demo";
 import { redirect } from "next/navigation";
 import { requireOrg } from "@/lib/dashboard";
 import { changePlan, saveCustomDomain } from "@/lib/actions/billing";
 import { confirmCheckout } from "@/lib/payments";
 import { hasFeature, PLAN_ORDER, PLANS, trialDaysLeft } from "@/lib/plans";
 import { paymentsEnabled, upgradePrice } from "@/lib/stripe";
-import { demoEnabled } from "@/lib/supabase/env";
 import { adminClient } from "@/lib/supabase/server";
 import type { Plan } from "@/lib/types";
 import { Badge, Button, Card, CardHeader, Input, PageHeader, Progress } from "@/components/ui";
@@ -16,7 +16,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const { changed, checkout, session_id } = await searchParams;
   const o = await requireOrg("billing");
   const w = o.ctx.wedding;
-  const demo = demoEnabled(), live = !demo && paymentsEnabled();
+  const demo = isDemoWedding(w.id), live = !demo && paymentsEnabled();
   // Back from Stripe Checkout: apply the payment now rather than waiting for the webhook.
   if (session_id && live) {
     const plan = await confirmCheckout(adminClient(), session_id, { wedding_id: w.id });

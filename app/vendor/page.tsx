@@ -3,13 +3,13 @@ import { redirect } from "next/navigation";
 import { Check, ExternalLink, LogOut } from "lucide-react";
 import { currentUser } from "@/lib/auth";
 import { publishedListings } from "@/lib/listings";
+import { isDemoEmail } from "@/lib/demo";
 import { fromRow } from "@/lib/rows";
 import { serverClient } from "@/lib/supabase/server";
 import { logout } from "@/lib/actions/auth";
 import { changeListingTier, openBillingPortal, setInquiryStatus, updateListing } from "@/lib/actions/marketplace";
 import { confirmCheckout } from "@/lib/payments";
 import { paymentsEnabled } from "@/lib/stripe";
-import { demoEnabled } from "@/lib/supabase/env";
 import { adminClient } from "@/lib/supabase/server";
 import { cn, shortDate } from "@/lib/format";
 import { CATEGORIES, TRADITION_LABELS, VENDOR_TAGS } from "@/lib/marketplace";
@@ -30,7 +30,7 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
   const { data: mine } = await sb.from("listings").select("*").eq("owner_user_id", user.id).limit(1).maybeSingle();
   if (!mine) redirect("/for-vendors");
   const l = fromRow("listings", mine);
-  const demo = demoEnabled(), live = !demo && paymentsEnabled();
+  const demo = isDemoEmail(user.email), live = !demo && paymentsEnabled();
   // Back from Stripe Checkout: apply the subscription now rather than waiting for the webhook.
   if (sp.session_id && live) {
     const tier = await confirmCheckout(adminClient(), sp.session_id, { listing_id: l.id });
@@ -46,7 +46,7 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
   const show = sp.show ?? "open";
   const inquiries = all.filter((q) => show === "all" || (show === "open" ? q.status === "new" || q.status === "replied" : q.status === show));
   const booked = all.filter((q) => q.status === "booked").length;
-  const rank = (await publishedListings()).filter((x) => x.published && x.category === l.category).sort((a, b) => ({ spotlight: 0, featured: 1, basic: 2 })[a.tier] - ({ spotlight: 0, featured: 1, basic: 2 })[b.tier] || b.rating - a.rating).findIndex((x) => x.id === l.id) + 1;
+  const rank = (await publishedListings({ includeDemo: isDemoEmail(user.email) })).filter((x) => x.published && x.category === l.category).sort((a, b) => ({ spotlight: 0, featured: 1, basic: 2 })[a.tier] - ({ spotlight: 0, featured: 1, basic: 2 })[b.tier] || b.rating - a.rating).findIndex((x) => x.id === l.id) + 1;
 
   return (
     <div className="min-h-screen pb-28">

@@ -33,6 +33,9 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       QUBOOL_DEMO: "on", STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+      // The email tests deliver through the demo wedding to example.com addresses (to the Resend mock).
+      // Production never sets this, so the demo never emails anyone there.
+      QUBOOL_EMAIL_DEMO_ROWS: "send",
       RESEND_API_KEY: "re_test_mock", RESEND_API_URL: RESEND_MOCK_URL, EMAIL_FROM: "Qubool <invitations@qubool.test>",
       RESEND_WEBHOOK_SECRET: process.env.RESEND_WEBHOOK_SECRET, CRON_SECRET: process.env.CRON_SECRET,
     },
