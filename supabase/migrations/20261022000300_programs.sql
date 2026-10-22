@@ -14,7 +14,7 @@ create table vendor_applications (
   city text not null,
   region text,
   contact_name text not null,
-  email citext not null,
+  email extensions.citext not null,
   phone text,
   instagram text,
   website text,
@@ -36,7 +36,7 @@ create table beta_applications (
   id uuid primary key default gen_random_uuid(),
   kind text not null check (kind in ('couple', 'planner')),
   name text not null check (char_length(name) between 2 and 100),
-  email citext not null,
+  email extensions.citext not null,
   phone text,
   partner_name text,       -- couples
   company text,            -- planners
