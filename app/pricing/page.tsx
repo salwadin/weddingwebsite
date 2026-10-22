@@ -6,7 +6,7 @@ export const metadata = { title: "Pricing" };
 
 const FAQ = [
   ["Is it really free to start?", "Yes. Every new wedding gets 14 days with all features. After that you keep Essentials for free, or upgrade once for the whole wedding."],
-  ["Is it a subscription?", "No. Plus and Signature are one-time payments per wedding, so they last until after your Walima."],
+  ["Is it a subscription?", "No. Plus and Signature are one-time payments per wedding, so they last until your very last celebration."],
   ["Do guests pay anything?", "Never. Guests open their personal link and RSVP for free."],
   ["Do I pay to contact vendors?", "No. Browsing and messaging vendors is free on every plan."],
 ];

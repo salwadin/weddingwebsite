@@ -11,7 +11,7 @@ test("the public marketplace shows only real vendors; demo visitors also see the
   const visitor = await (await browser.newContext()).newPage();
   await visitor.goto("/marketplace");
   await expect(visitor.getByText("Noor Light Studios")).toHaveCount(0);
-  await expect(visitor.getByText("Founding vendors")).toBeVisible();
+  await expect(visitor.getByText("Founding vendors", { exact: true })).toBeVisible();
 
   // A real, published listing shows up for everyone.
   const name = `Real Vendor ${Date.now()}`;

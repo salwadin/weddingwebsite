@@ -156,6 +156,10 @@ test("vendors edit their listing and receive inquiries from the marketplace", as
   await loginAs(page, "vendor@example.com");
   await expect(page).toHaveURL(/\/vendor/);
   await expect(page.getByText("Do you have availability for a Nikah in June?")).toBeVisible();
+  // Each "Mark …" button sets its own status.
+  const item = page.locator("li", { hasText: "Do you have availability for a Nikah in June?" });
+  await item.getByRole("button", { name: "Mark booked" }).click();
+  await expect.poll(async () => (await admin.from("inquiries").select("status").eq("message", "Do you have availability for a Nikah in June?").single()).data!.status).toBe("booked");
   await page.getByLabel("Tagline").fill("Documentary photography, all-female team on request.");
   await page.getByRole("button", { name: "Save listing" }).click();
   await page.waitForURL(/saved=1/);

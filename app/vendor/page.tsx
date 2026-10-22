@@ -4,6 +4,7 @@ import { Check, ExternalLink, LogOut } from "lucide-react";
 import { currentUser } from "@/lib/auth";
 import { publishedListings } from "@/lib/listings";
 import { isDemoEmail } from "@/lib/demo";
+import { applyFoundingPerks } from "@/lib/programs";
 import { fromRow } from "@/lib/rows";
 import { serverClient } from "@/lib/supabase/server";
 import { logout } from "@/lib/actions/auth";
@@ -27,9 +28,14 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
   if (!user) redirect("/login");
   if (user.kind !== "vendor") redirect("/dashboard");
   const sb = await serverClient();
-  const { data: mine } = await sb.from("listings").select("*").eq("owner_user_id", user.id).limit(1).maybeSingle();
+  let { data: mine } = await sb.from("listings").select("*").eq("owner_user_id", user.id).limit(1).maybeSingle();
   if (!mine) redirect("/for-vendors");
-  const l = fromRow("listings", mine);
+  // Approved Founding Vendors get their free Featured year the first time they open the portal.
+  if (!mine.founding_until && !isDemoEmail(user.email) && (await applyFoundingPerks(user.email))) {
+    ({ data: mine } = await sb.from("listings").select("*").eq("id", mine.id).single());
+  }
+  const founding = mine!.founding_number ? { number: mine!.founding_number as number, until: new Date(mine!.founding_until as string) } : null;
+  const l = fromRow("listings", mine!);
   const demo = isDemoEmail(user.email), live = !demo && paymentsEnabled();
   // Back from Stripe Checkout: apply the subscription now rather than waiting for the webhook.
   if (sp.session_id && live) {
@@ -68,6 +74,12 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
           <div>
             <h1 className="font-serif text-4xl">{l.name}</h1>
             <p className="text-sm text-muted">{l.category} · {l.city} · {l.published ? "Published" : "Not published yet"}</p>
+            {founding && (
+              <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-gold-soft/70 px-3 py-1 text-xs text-[#7a5d2f]">
+                <b>Founding Vendor #{founding.number}</b>
+                {founding.until > new Date() ? `· Featured free until ${founding.until.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}` : "· Founding year complete"}
+              </p>
+            )}
           </div>
           <Link href={`/marketplace/${l.id}`} target="_blank" className="flex items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-sm hover:bg-cream"><ExternalLink className="h-3.5 w-3.5" />View listing</Link>
         </div>
@@ -94,10 +106,10 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
                   </div>
                   <p className="mt-1 text-xs text-muted">{q.eventDate ? `Wedding ${shortDate(q.eventDate)}` : "Date not set"}{q.guests ? ` · ${q.guests} guests` : ""} · <a href={`mailto:${q.fromEmail}`} className="underline">{q.fromEmail}</a></p>
                   <p className="mt-2 text-sm leading-relaxed">{q.message}</p>
-                  <form action={setInquiryStatus} className="mt-2 flex gap-1">
+                  <form className="mt-2 flex gap-1">
                     <input type="hidden" name="id" value={q.id} />
                     {(["replied", "booked", "closed"] as const).filter((s) => s !== q.status).map((s) => (
-                      <button key={s} name="status" value={s} className="rounded-full border border-line px-2.5 py-0.5 text-xs hover:bg-cream">Mark {s}</button>
+                      <button key={s} formAction={setInquiryStatus.bind(null, s)} className="rounded-full border border-line px-2.5 py-0.5 text-xs hover:bg-cream">Mark {s}</button>
                     ))}
                   </form>
                 </li>

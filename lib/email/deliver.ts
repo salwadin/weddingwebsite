@@ -7,7 +7,7 @@ import { DEMO_WEDDING_ID } from "../seed";
 import { isDemoOutboxRow } from "../demo-rules";
 import { emailEnabled, sendBatch, type OutgoingEmail } from "./resend";
 import {
-  collaboratorInviteEmail, inquiryEmail, invitationEmail, linkResendEmail, reminderEmail, saveTheDateEmail, type Email,
+  betaInviteEmail, collaboratorInviteEmail, foundingApprovedEmail, inquiryEmail, invitationEmail, linkResendEmail, reminderEmail, saveTheDateEmail, type Email,
 } from "./templates";
 
 // Delivery of `pending` email rows in the outbox through Resend.
@@ -222,6 +222,13 @@ function build(row: OutboxRow, ctx: Context, origin: string): Built {
       // Written only by send_inquiry() (organizers can only insert rows with a wedding_id).
       if (row.wedding_id) return { error: "Unexpected inquiry row" };
       return inquiryEmail({ subject: row.subject ?? "New inquiry", message: row.body ?? "", link: url("/vendor") });
+    }
+    case "founding_approved": case "beta_invite": {
+      // Written only by staff actions with the service role (organizers can only insert rows with a wedding_id).
+      if (row.wedding_id) return { error: "Unexpected program row" };
+      return row.kind === "founding_approved"
+        ? foundingApprovedEmail({ subject: (row.subject ?? "You're approved").slice(0, 120), link: url("/for-vendors") })
+        : betaInviteEmail({ link: url("/signup") });
     }
     default:
       return { error: `No email template for "${row.kind}"` };

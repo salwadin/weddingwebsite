@@ -36,6 +36,7 @@ export default defineConfig({
       // The email tests deliver through the demo wedding to example.com addresses (to the Resend mock).
       // Production never sets this, so the demo never emails anyone there.
       QUBOOL_EMAIL_DEMO_ROWS: "send",
+      QUBOOL_STAFF_EMAILS: "planner@example.com", // reviews applications in tests/programs.spec.ts
       RESEND_API_KEY: "re_test_mock", RESEND_API_URL: RESEND_MOCK_URL, EMAIL_FROM: "Qubool <invitations@qubool.test>",
       RESEND_WEBHOOK_SECRET: process.env.RESEND_WEBHOOK_SECRET, CRON_SECRET: process.env.CRON_SECRET,
     },

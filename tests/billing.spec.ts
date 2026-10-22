@@ -31,7 +31,7 @@ const planSession = (plan: string, amount: number) => ({
   metadata: { kind: "plan", wedding_id: DEMO_WEDDING_ID, plan, from_plan: "free", actor: "Ayesha Siddiqui" },
 });
 
-const subscription = (id: string, status: string, tier = "featured", amount = 4900) => ({
+const subscription = (id: string, status: string, tier = "featured", amount = 1000) => ({
   id, object: "subscription", status, customer: "cus_test_noor", cancel_at_period_end: false, cancel_at: null,
   metadata: { kind: "tier", listing_id: LISTING, tier },
   items: { object: "list", data: [{ id: `si_${id}`, current_period_end: Math.floor(Date.now() / 1000) + 30 * 86400, price: { id: `price_inline_${tier}`, unit_amount: amount, currency: "usd", product: "prod_test" } }] },
@@ -79,10 +79,10 @@ test("a vendor subscription sets the tier, and its end returns the listing to Ba
   const subId = `sub_test_${uniq()}`;
   const s = {
     id: `cs_test_${uniq()}`, object: "checkout.session", mode: "subscription", status: "complete", payment_status: "paid",
-    amount_total: 4900, currency: "usd", customer: "cus_test_noor", subscription: subId, metadata: { kind: "tier", listing_id: LISTING, tier: "featured" },
+    amount_total: 1000, currency: "usd", customer: "cus_test_noor", subscription: subId, metadata: { kind: "tier", listing_id: LISTING, tier: "featured" },
   };
   // A pending row, as changeListingTier leaves it when it opens Checkout.
-  await admin.from("subscriptions").insert({ listing_id: LISTING, tier: "featured", status: "pending", amount: 4900, stripe_checkout_session_id: s.id });
+  await admin.from("subscriptions").insert({ listing_id: LISTING, tier: "featured", status: "pending", amount: 1000, stripe_checkout_session_id: s.id });
 
   expect((await post(request, event("checkout.session.completed", s))).status()).toBe(200);
   expect((await post(request, event("customer.subscription.created", subscription(subId, "active")))).status()).toBe(200);
@@ -100,9 +100,9 @@ test("a vendor subscription sets the tier, and its end returns the listing to Ba
   expect(other).toEqual([]);
 
   // Switched to Spotlight in the portal, then cancelled.
-  await post(request, event("customer.subscription.updated", subscription(subId, "active", "spotlight", 14900)));
+  await post(request, event("customer.subscription.updated", subscription(subId, "active", "spotlight", 2500)));
   expect(await tier()).toBe("spotlight");
-  await post(request, event("customer.subscription.deleted", subscription(subId, "canceled", "spotlight", 14900)));
+  await post(request, event("customer.subscription.deleted", subscription(subId, "canceled", "spotlight", 2500)));
   expect(await tier()).toBe("basic");
 });
 
@@ -164,7 +164,7 @@ test("a vendor checkout that hasn't been paid yet doesn't upgrade the listing", 
   await admin.from("listings").update({ tier: "basic" }).eq("id", LISTING);
   const s = {
     id: `cs_test_${uniq()}`, object: "checkout.session", mode: "subscription", status: "complete", payment_status: "unpaid",
-    amount_total: 4900, currency: "usd", customer: "cus_test_noor", subscription: `sub_test_${uniq()}`, metadata: { kind: "tier", listing_id: LISTING, tier: "featured" },
+    amount_total: 1000, currency: "usd", customer: "cus_test_noor", subscription: `sub_test_${uniq()}`, metadata: { kind: "tier", listing_id: LISTING, tier: "featured" },
   };
   expect((await post(request, event("checkout.session.completed", s))).status()).toBe(200);
   expect((await admin.from("listings").select("tier").eq("id", LISTING).single()).data!.tier).toBe("basic");

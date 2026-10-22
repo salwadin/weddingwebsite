@@ -110,7 +110,10 @@ export async function syncSubscription(admin: Supabase, sub: Stripe.Subscription
   if (!ENDED.includes(sub.status)) return; // incomplete: the first payment is still going through
   const { data: others } = must(await admin.from("subscriptions").select("tier").eq("listing_id", listingId)
     .in("status", LIVE).neq("stripe_subscription_id", sub.id).order("created_at", { ascending: false }).limit(1));
-  must(await admin.from("listings").update({ tier: (others?.[0]?.tier as ListingTier) ?? "basic" }).eq("id", listingId));
+  // A Founding Vendor still inside their free year keeps Featured.
+  const { data: l } = must(await admin.from("listings").select("founding_until").eq("id", listingId).maybeSingle());
+  const foundingActive = !!l?.founding_until && new Date(l.founding_until).getTime() > Date.now();
+  must(await admin.from("listings").update({ tier: (others?.[0]?.tier as ListingTier) ?? (foundingActive ? "featured" : "basic") }).eq("id", listingId));
 }
 
 // ---------------------------------------------------------------------------

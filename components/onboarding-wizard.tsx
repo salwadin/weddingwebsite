@@ -29,6 +29,12 @@ const DEFAULTS: Record<string, { visibility: Visibility; rsvpMode: RsvpMode; hos
   shaash_saar: { visibility: "private", rsvpMode: "optional", hostSide: "bride" },
   welcome_dinner: { visibility: "invite", rsvpMode: "required", hostSide: "both" },
   brunch: { visibility: "invite", rsvpMode: "optional", hostSide: "both" },
+  ceremony: { visibility: "invite", rsvpMode: "required", hostSide: "both" },
+  rehearsal_dinner: { visibility: "private", rsvpMode: "required", hostSide: "both" },
+  sangeet: { visibility: "invite", rsvpMode: "required", hostSide: "both" },
+  haldi: { visibility: "private", rsvpMode: "optional", hostSide: "both" },
+  tea_ceremony: { visibility: "private", rsvpMode: "required", hostSide: "both" },
+  after_party: { visibility: "invite", rsvpMode: "optional", hostSide: "both" },
 };
 
 const THEMES = [
@@ -53,7 +59,7 @@ export function OnboardingWizard({ action, userName }: { action: (i: OnboardingI
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
   const [names, setNames] = useState({ partner1: "", partner2: "", partner1Family: "", partner2Family: "", role: "bride" as "bride" | "groom" });
-  const [tradition, setTradition] = useState("south_asian");
+  const [tradition, setTradition] = useState(TRADITIONS[0].value);
   const [types, setTypes] = useState<EventType[]>(TRADITIONS[0].events);
   const [events, setEvents] = useState<Record<string, Ev>>({});
   const [theme, setTheme] = useState<OnboardingInput["theme"]>("noor");
@@ -195,7 +201,7 @@ export function OnboardingWizard({ action, userName }: { action: (i: OnboardingI
               {THEMES.map((t) => (
                 <button key={t.id} type="button" onClick={() => setTheme(t.id)} className={cn("overflow-hidden rounded-2xl border text-left", theme === t.id ? "border-ink ring-2 ring-gold-soft" : "border-line")}>
                   <div className="flex h-36 flex-col items-center justify-center" style={{ background: t.c[0], color: t.c[2] }}>
-                    <span className="font-arabic text-sm" style={{ color: t.c[1] }}>بِسْمِ اللَّهِ</span>
+                    {TRADITIONS.find((x) => x.value === tradition)?.islamic && <span className="font-arabic text-sm" style={{ color: t.c[1] }}>بِسْمِ اللَّهِ</span>}
                     <span className="font-serif text-4xl">{names.partner1 || "Ayesha"} <span style={{ color: t.c[1] }}>&amp;</span> {names.partner2 || "Omar"}</span>
                   </div>
                   <p className="px-4 py-3 font-serif text-xl">{t.name}</p>

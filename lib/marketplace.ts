@@ -22,8 +22,8 @@ export const VENDOR_TAGS: Record<string, string> = {
 };
 
 export const TRADITION_LABELS: Record<string, string> = {
-  south_asian: "South Asian", arab: "Arab", persian: "Persian", turkish: "Turkish",
-  west_african: "West African", somali: "Somali", east_african: "East African",
+  south_asian: "South Asian Muslim", hindu_sikh: "Hindu & Sikh", arab: "Arab", persian: "Persian", turkish: "Turkish",
+  west_african: "West African", somali: "Somali", east_african: "East African", chinese: "Chinese", jewish: "Jewish", modern: "Modern / Western",
 };
 
 export const TIER_RANK = { spotlight: 0, featured: 1, basic: 2 } as const;

@@ -12,6 +12,8 @@ export type EventType =
   | "engagement" | "henna" | "mehndi" | "kina" | "dholki" | "mayoun" | "baraat" | "bridal_shower" | "welcome_dinner"
   // Post-wedding
   | "shaash_saar" | "family_dinner" | "brunch"
+  // Other traditions
+  | "ceremony" | "rehearsal_dinner" | "sangeet" | "haldi" | "tea_ceremony" | "after_party"
   | "custom";
 
 /** Couple subscription tier. */
