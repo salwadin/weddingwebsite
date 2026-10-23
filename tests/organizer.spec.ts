@@ -43,7 +43,7 @@ test("issuing a new invitation link disables the old one", async ({ page }) => {
   await gp.goto(`/i/${deriveToken(old.id)}`);
   await expect(gp).toHaveURL(/\/invite-expired$/);
   await gp.goto(`/i/${deriveToken(now[0].id)}`);
-  await expect(gp).toHaveURL(new RegExp(`/w/${SLUG}$`));
+  await expect(gp).toHaveURL(new RegExp(`/w/${SLUG}/invitation$`));
   expect(await siteHtml(gp.request)).toContain(PRIVATE_MARKERS.shaadi[0]);
   await guest.close();
 });

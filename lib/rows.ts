@@ -52,7 +52,7 @@ export const TABLES: Record<TableKey, TableSpec> = {
   tasks: { table: "tasks", write: "upsert", strings: ["assignee"],
     fields: ["id", "weddingId", "eventId", "title", "assignee", "dueDate", "done", "side"] },
   designs: { table: "invitation_designs", write: "upsert", strings: ["englishText", "urduText", "arabicText"],
-    fields: ["id", "weddingId", "eventId", "template", "englishText", "urduText", "arabicText", "showQr"] },
+    fields: ["id", "weddingId", "eventId", "template", "englishText", "urduText", "arabicText", "showQr", "imagePath"] },
   outfits: { table: "outfits", write: "upsert", strings: ["designer"], lists: ["colors", "pieces", "fittings"],
     fields: ["id", "weddingId", "eventId", "vendorId", "wearer", "role", "side", "title", "designer", "status", "colors", "image",
       "cost", "paid", "dueDate", "pieces", "fittings", "notes"] },

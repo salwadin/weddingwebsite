@@ -280,11 +280,13 @@ export interface InvitationDesign {
   id: string;
   weddingId: string;
   eventId: string;
-  template: "arch" | "jali" | "minimal";
+  template: "arch" | "jali" | "minimal" | "custom"; // custom: the couple's uploaded artwork (imagePath)
   englishText: string;
   urduText: string;
   arabicText: string;
   showQr: boolean;
+  /** Uploaded artwork in the private invitation-art bucket (lib/invitation-art.ts). */
+  imagePath?: string;
 }
 
 // ---------------- Outfits ----------------

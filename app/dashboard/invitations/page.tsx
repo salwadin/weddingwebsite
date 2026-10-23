@@ -7,12 +7,13 @@ import { cn, islamicDate, longDate, time12 } from "@/lib/format";
 import { Badge, Button, Card, CardHeader, Checkbox, Field, PageHeader, Select, Textarea } from "@/components/ui";
 import { CopyButton, WhatsAppButton } from "@/components/dash/nav";
 import { InvitationPreview } from "@/components/dash/invitation-preview";
+import { artUrl } from "@/lib/invitation-art";
 import { emailEnabled } from "@/lib/email/resend";
 import { hasFeature, SMS_PER_MONTH } from "@/lib/plans";
 import { normalizePhone } from "@/lib/sms/rules";
 import { smsEnabled } from "@/lib/sms/twilio";
 
-export default async function InvitationsPage({ searchParams }: { searchParams: Promise<{ event?: string; saved?: string; sent?: string; error?: string }> }) {
+export default async function InvitationsPage({ searchParams }: { searchParams: Promise<{ event?: string; saved?: string; sent?: string; error?: string; artError?: string }> }) {
   const sp = await searchParams;
   const o = await requireOrg("invitations");
   if (!allows(o, "invitation_designer")) return <><PageHeader title="Invitations" description="Each family's personal invitation link is always available on their page in the Guest List." /><UpgradeGate feature="invitation_designer" canManageBilling={can(o.scope, "billing")}>Design invitations for each event in English, Arabic and a second language, personalized with each family's name and an RSVP QR code.</UpgradeGate></>;
@@ -20,7 +21,7 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
   const w = o.ctx.wedding;
   const e = events.find((x) => x.id === sp.event) ?? events[0];
   if (!e) return <PageHeader title="Invitations" description="Add an event first." />;
-  const design = d.designs.find((x) => x.eventId === e.id) ?? { template: "arch" as const, englishText: `Together with their families, ${w.partner1} & ${w.partner2} invite you to their ${e.name}`, urduText: "", arabicText: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", showQr: true };
+  const design = d.designs.find((x) => x.eventId === e.id) ?? { template: "arch" as const, imagePath: undefined, englishText: `Together with their families, ${w.partner1} & ${w.partner2} invite you to their ${e.name}`, urduText: "", arabicText: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", showQr: true };
   const canEdit = can(o.scope, "invitations", "edit");
   const invited = households.filter((h) => d.invitations.some((i) => i.householdId === h.id && i.eventId === e.id));
   const tokenFor = (hid: string) => d.tokens.find((t) => t.householdId === hid && !t.revokedAt)?.token;
@@ -36,6 +37,7 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
   const outbox = d.outbox.filter((m) => m.weddingId === w.id && (!m.householdId || households.some((h) => h.id === m.householdId))).slice(0, 25);
   const publicLink = `/w/${w.slug}/events/${e.id}`;
   const delivering = emailEnabled();
+  const art = design.template === "custom" ? await artUrl(w.id, design.imagePath) : null;
   // Texting: only on a bought plan (w.plan stays "free" during the trial), and only once Twilio is configured.
   const texting = smsEnabled(), canText = texting && hasFeature(w.plan, "sms");
   const { count: textsUsed } = canText
@@ -54,6 +56,7 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
       </div>
       {sp.saved && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-2.5 text-sm text-[#3f5238]">Design saved.</p>}
       {sp.sent && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-2.5 text-sm text-[#3f5238]">{delivering ? `${sp.sent} messages sent. Email and text delivery shows in the outbox below; WhatsApp messages are ready to share.` : `${sp.sent} messages queued. See the outbox below. (Delivery is simulated in this demo.)`}</p>}
+      {sp.artError && <p className="mb-4 rounded-xl bg-rose-soft px-4 py-2.5 text-sm text-[#9b4d47]">{sp.artError.slice(0, 200)}</p>}
       {sp.error === "sms_consent" && <p className="mb-4 rounded-xl bg-rose-soft px-4 py-2.5 text-sm text-[#9b4d47]">Nothing was sent. To text guests, tick the box confirming they agreed to receive texts from you.</p>}
 
       <div className="grid gap-5 xl:grid-cols-[1fr_440px]">
@@ -63,14 +66,17 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
             <form action={saveDesign} className="grid gap-4 p-5">
               <input type="hidden" name="eventId" value={e.id} />
               <fieldset disabled={!canEdit} className="contents">
-                <div className="grid grid-cols-3 gap-2">
-                  {(["arch", "jali", "minimal"] as const).map((t) => (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {(["arch", "jali", "minimal", "custom"] as const).map((t) => (
                     <label key={t} className="cursor-pointer rounded-xl border border-line p-3 text-center text-sm capitalize has-[:checked]:border-ink has-[:checked]:bg-cream/60">
                       <input type="radio" name="template" value={t} defaultChecked={design.template === t} className="sr-only" />
-                      {t === "arch" ? "Mehrab arch" : t === "jali" ? "Jali lattice" : "Modern minimal"}
+                      {t === "arch" ? "Mehrab arch" : t === "jali" ? "Jali lattice" : t === "minimal" ? "Modern minimal" : "Your own design"}
                     </label>
                   ))}
                 </div>
+                <Field label="Your own design" hint={<>Upload the invitation you made in Canva, Minted or with your stationer (PNG, JPG or WebP, up to 8 MB; about 1200 × 1720 px looks best), then choose &ldquo;Your own design&rdquo;. Guests see it on their personal invitation page.{design.imagePath ? " A design is uploaded; choosing a new file replaces it." : ""}</>}>
+                  <input type="file" name="art" accept="image/png,image/jpeg,image/webp" className="text-sm file:mr-3 file:rounded-full file:border file:border-line file:bg-white file:px-3 file:py-1.5 file:text-xs" />
+                </Field>
                 <Field label="Arabic (top)"><Textarea name="arabicText" rows={1} dir="rtl" defaultValue={design.arabicText} className="font-arabic text-lg" /></Field>
                 <Field label="Invitation wording (English)"><Textarea name="englishText" rows={3} defaultValue={design.englishText} /></Field>
                 <Field label="Second-language line"><Textarea name="urduText" rows={1} dir="rtl" defaultValue={design.urduText} className="font-urdu leading-[2.4]" /></Field>
@@ -150,11 +156,19 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
         </div>
 
         <div className="xl:sticky xl:top-8 xl:self-start">
+          {art ? (
+            <div>
+              <p className="mb-3 text-xs text-muted">Your uploaded design, as guests see it.</p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={art} alt={`Invitation to the ${e.name}`} className="mx-auto w-full max-w-[420px] rounded-xl shadow-[0_20px_60px_-30px_rgba(43,38,32,0.5)]" />
+            </div>
+          ) : (
           <InvitationPreview
-            template={design.template} englishText={design.englishText} urduText={design.urduText} arabicText={design.arabicText} showQr={design.showQr}
+            template={design.template === "custom" ? "arch" : design.template} englishText={design.englishText} urduText={design.urduText} arabicText={design.arabicText} showQr={design.showQr}
             eventName={e.name} names={`${w.partner1} & ${w.partner2}`} dateLine={longDate(e.date)}
             islamicLine={w.culture.islamicDates ? islamicDate(e.date) : ""} timeLine={`${time12(e.startTime)} onwards`} venue={e.venueName} address={e.address}
             recipients={recipients.length ? recipients : [{ name: "Sample guest", link: `/w/${w.slug}` }]} />
+          )}
         </div>
       </div>
     </>

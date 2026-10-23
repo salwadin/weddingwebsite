@@ -34,7 +34,7 @@ export const PRIVATE_MARKERS: Record<keyof typeof DEMO_EVENTS, string[]> = {
 
 /** Raw server responses (HTML + inlined RSC payload) for the pages that list events. */
 export async function siteHtml(request: APIRequestContext) {
-  const pages = ["", "/events", "/rsvp", "/faq", "/story", "/travel", "/gallery"];
+  const pages = ["", "/invitation", "/events", "/rsvp", "/faq", "/story", "/travel", "/gallery"];
   const bodies = await Promise.all(pages.map(async (p) => {
     const res = await request.get(`/w/${SLUG}${p}`);
     if (!res.ok()) throw new Error(`/w/${SLUG}${p} → ${res.status()}`);
