@@ -1,7 +1,6 @@
 "use server";
 
 import { TRADITIONS } from "../format";
-import { DEFAULT_HERO } from "../photos";
 import { applyBetaPerks } from "../programs";
 import { redirect } from "next/navigation";
 import { currentUser, organizerContext } from "../auth";
@@ -39,7 +38,7 @@ export async function createWedding(input: OnboardingInput): Promise<{ error?: s
     partner1Family: clean(input.partner1Family), partner2Family: clean(input.partner2Family),
     relationship: input.role === "groom" ? "Groom" : "Bride",
     tagline: islamic ? "Two families, one beginning, Insha'Allah." : "Two families, one beginning.",
-    heroImage: DEFAULT_HERO,
+    heroImage: "", // no stock photo: the site shows a plain cover until the couple uploads their own
     story: [], gallery: [], faqs: islamic ? [
       { q: "Will there be space for prayer?", a: "Yes, there will be a dedicated prayer space at each venue." },
       { q: "Is the food halal?", a: "Yes, all food served is halal." },
@@ -48,7 +47,7 @@ export async function createWedding(input: OnboardingInput): Promise<{ error?: s
       { q: "Can I bring my children?", a: "Please refer to the names listed on your personal invitation." },
     ],
     travel: { intro: "", airport: "", hotels: [] }, registry: { message: islamic ? "Your duas and presence are the greatest gift." : "Your presence is the greatest gift.", links: [] },
-    theme: { id: (["noor", "gulab", "zaitoon", "mehtab"] as const).includes(input.theme) ? input.theme : "noor", heading: "cormorant", pattern: "arch" } satisfies ThemeSettings,
+    theme: { id: (["noor", "gulab", "zaitoon", "mehtab"] as const).includes(input.theme) ? input.theme : "noor", heading: "cormorant", pattern: "none" } satisfies ThemeSettings,
     culture: {
       // Islamic touches are on for Muslim traditions and off otherwise; couples can change them in Website settings.
       showBismillah: islamic, islamicDates: islamic,

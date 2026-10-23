@@ -3,12 +3,13 @@ import { requireOrg } from "@/lib/dashboard";
 import { saveWebsite } from "@/lib/actions/dashboard";
 import { Button, ButtonLink, Card, CardHeader, Checkbox, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { CopyButton } from "@/components/dash/nav";
+import { PhotoUpload } from "@/components/photo-upload";
 
 const THEMES = [
-  { id: "noor", name: "Noor", desc: "Ivory & champagne gold", swatch: ["#fbf8f2", "#b08d57", "#2b2620"] },
-  { id: "gulab", name: "Gulab", desc: "Blush & dusty rose", swatch: ["#fcf7f5", "#b77a74", "#2b2620"] },
-  { id: "zaitoon", name: "Zaitoon", desc: "Olive & sage", swatch: ["#f8f8f3", "#6f8466", "#2b2620"] },
-  { id: "mehtab", name: "Mehtab", desc: "Midnight & moonlit gold", swatch: ["#141a26", "#d2b07a", "#f3ede2"] },
+  { id: "noor", name: "Ivory & gold", desc: "Warm ivory, champagne gold", swatch: ["#fbf8f2", "#b08d57", "#2b2620"] },
+  { id: "gulab", name: "Blush", desc: "Soft blush, dusty rose", swatch: ["#fcf7f5", "#b77a74", "#2b2620"] },
+  { id: "zaitoon", name: "Sage", desc: "Olive and sage greens", swatch: ["#f8f8f3", "#6f8466", "#2b2620"] },
+  { id: "mehtab", name: "Midnight", desc: "Deep navy, moonlit gold", swatch: ["#141a26", "#d2b07a", "#f3ede2"] },
 ];
 
 export default async function WebsitePage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
@@ -24,14 +25,14 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
       <form action={saveWebsite}>
         <fieldset disabled={!canEdit} className="grid gap-5 xl:grid-cols-2">
           <Card className="xl:col-span-2">
-            <CardHeader title="Theme" description="Contemporary South Asian palettes. Change any time." />
+            <CardHeader title="Theme" description="A starting palette for your site. Change it, the font, the pattern or the accent color any time." />
             <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
               {THEMES.map((t) => (
                 <label key={t.id} className="cursor-pointer rounded-2xl border border-line p-4 has-[:checked]:border-ink has-[:checked]:ring-2 has-[:checked]:ring-gold-soft">
                   <input type="radio" name="themeId" value={t.id} defaultChecked={w.theme.id === t.id} className="sr-only" />
                   <div className="flex h-20 items-end gap-1 rounded-xl p-2" style={{ background: t.swatch[0] }}>
-                    <span className="arch-mask h-14 w-10" style={{ background: t.swatch[1] }} />
-                    <span className="font-serif text-2xl" style={{ color: t.swatch[2] }}>A&amp;O</span>
+                    <span className="h-14 w-10 rounded-lg" style={{ background: t.swatch[1] }} />
+                    <span className="font-serif text-2xl" style={{ color: t.swatch[2] }}>{w.partner1[0]}&amp;{w.partner2[0]}</span>
                   </div>
                   <p className="mt-2 font-serif text-lg">{t.name}</p>
                   <p className="text-xs text-muted">{t.desc}</p>
@@ -40,7 +41,7 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
             </div>
             <div className="grid gap-4 border-t border-line/70 p-5 sm:grid-cols-3">
               <Field label="Heading font"><Select name="heading" defaultValue={w.theme.heading}><option value="cormorant">Cormorant (classic)</option><option value="playfair">Playfair (editorial)</option><option value="marcellus">Marcellus (engraved)</option></Select></Field>
-              <Field label="Pattern"><Select name="pattern" defaultValue={w.theme.pattern}><option value="arch">Mehrab arches</option><option value="jali">Jali lattice</option><option value="none">None</option></Select></Field>
+              <Field label="Pattern"><Select name="pattern" defaultValue={w.theme.pattern}><option value="none">None (clean)</option><option value="arch">Arches</option><option value="jali">Lattice</option></Select></Field>
               <Field label="Accent color override" hint="Optional hex, e.g. #9c7a4a"><Input name="accent" defaultValue={w.theme.accent ?? ""} placeholder="#b08d57" /></Field>
             </div>
           </Card>
@@ -48,20 +49,53 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
           <Card>
             <CardHeader title="The couple" />
             <div className="grid gap-4 p-5 sm:grid-cols-2">
-              <Field label="Bride"><Input name="partner1" defaultValue={w.partner1} /></Field>
-              <Field label="Groom"><Input name="partner2" defaultValue={w.partner2} /></Field>
-              <Field label="Bride's family name"><Input name="partner1Family" defaultValue={w.partner1Family} /></Field>
-              <Field label="Groom's family name"><Input name="partner2Family" defaultValue={w.partner2Family} /></Field>
-              <Field label="Bride's name in another script" hint="Optional: Arabic, Urdu, Farsi…"><Input name="urdu1" dir="rtl" defaultValue={w.culture.urduNames.partner1} className="font-urdu" /></Field>
-              <Field label="Groom's name in another script"><Input name="urdu2" dir="rtl" defaultValue={w.culture.urduNames.partner2} className="font-urdu" /></Field>
+              <Field label="First partner"><Input name="partner1" defaultValue={w.partner1} /></Field>
+              <Field label="Second partner"><Input name="partner2" defaultValue={w.partner2} /></Field>
+              <Field label="Their family name"><Input name="partner1Family" defaultValue={w.partner1Family} /></Field>
+              <Field label="Their family name"><Input name="partner2Family" defaultValue={w.partner2Family} /></Field>
+              <Field label={`${w.partner1}'s name in another script`} hint="Optional: Arabic, Hebrew, Chinese, Hindi…"><Input name="urdu1" dir="auto" defaultValue={w.culture.urduNames.partner1} /></Field>
+              <Field label={`${w.partner2}'s name in another script`}><Input name="urdu2" dir="auto" defaultValue={w.culture.urduNames.partner2} /></Field>
               <Field label="Tagline" className="sm:col-span-2"><Input name="tagline" defaultValue={w.tagline} /></Field>
               <Field label="Web address" hint="Your website lives at /w/your-address" className="sm:col-span-2"><Input name="slug" defaultValue={w.slug} /></Field>
-              <Field label="Cover photo URL" className="sm:col-span-2"><Input name="heroImage" defaultValue={w.heroImage} /></Field>
+            </div>
+          </Card>
+
+          <Card className="xl:col-span-2">
+            <CardHeader title="Photos" description="Your own photos, shown on your website. Choose them, then save." />
+            <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+              <div>
+                <p className="text-sm font-medium">Cover photo</p>
+                <p className="mt-0.5 text-xs text-muted">The large photo at the top of your home page. Without one, your site uses your theme&apos;s colors.</p>
+                {w.heroImage ? (
+                  <div className="mt-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={w.heroImage} alt="Current cover photo" className="aspect-[16/10] w-full rounded-xl object-cover" />
+                    <label className="mt-2 flex items-center gap-2 text-xs"><Checkbox name="removeCover" /> Remove the cover photo</label>
+                  </div>
+                ) : <div className="mt-3 flex aspect-[16/10] items-center justify-center rounded-xl bg-cream/60 text-xs text-muted">No cover photo</div>}
+                <div className="mt-3"><PhotoUpload purpose="cover" name="coverPath" label={w.heroImage ? "Replace cover photo" : "Upload a cover photo"} /></div>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Gallery</p>
+                <p className="mt-0.5 text-xs text-muted">Shown on your Gallery page and alongside your story. PNG, JPG or WebP, up to 10 MB each.</p>
+                {w.gallery.length > 0 && (
+                  <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    {w.gallery.map((src, i) => (
+                      <label key={src} className="group relative block cursor-pointer">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt={`Gallery photo ${i + 1}`} className="aspect-square w-full rounded-lg object-cover group-has-[:checked]:opacity-40" />
+                        <span className="absolute inset-x-1 bottom-1 flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px]"><Checkbox name="removeGallery" value={src} aria-label={`Remove gallery photo ${i + 1}`} /> Remove</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-3"><PhotoUpload purpose="gallery" name="galleryPaths" multiple label="Add photos" /></div>
+              </div>
             </div>
           </Card>
 
           <Card>
-            <CardHeader title="Islamic design elements" />
+            <CardHeader title="Islamic touches" description="Optional. Off unless you turn them on." />
             <div className="grid gap-4 p-5">
               <label className="flex items-center gap-2 text-sm"><Checkbox name="showBismillah" defaultChecked={w.culture.showBismillah} /> Show Bismillah calligraphy</label>
               <label className="flex items-center gap-2 text-sm"><Checkbox name="islamicDates" defaultChecked={w.culture.islamicDates} /> Show Hijri dates alongside Gregorian</label>
@@ -92,11 +126,10 @@ export default async function WebsitePage({ searchParams }: { searchParams: Prom
           </Card>
 
           <Card>
-            <CardHeader title="Gifts & gallery" />
+            <CardHeader title="Gifts" />
             <div className="grid gap-4 p-5">
               <Field label="Gifting message"><Textarea name="registryMessage" rows={3} defaultValue={w.registry.message} /></Field>
               <Field label="Links" hint="One per line: Label | https://…"><Textarea name="registryLinks" rows={2} defaultValue={w.registry.links.map((l) => `${l.label} | ${l.url}`).join("\n")} /></Field>
-              <Field label="Gallery photo URLs" hint="One per line"><Textarea name="gallery" rows={4} defaultValue={w.gallery.join("\n")} className="font-mono text-xs" /></Field>
             </div>
           </Card>
 

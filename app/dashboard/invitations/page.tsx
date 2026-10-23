@@ -8,6 +8,7 @@ import { Badge, Button, Card, CardHeader, Checkbox, Field, PageHeader, Select, T
 import { CopyButton, WhatsAppButton } from "@/components/dash/nav";
 import { InvitationPreview } from "@/components/dash/invitation-preview";
 import { artUrl } from "@/lib/invitation-art";
+import { PhotoUpload } from "@/components/photo-upload";
 import { emailEnabled } from "@/lib/email/resend";
 import { hasFeature, SMS_PER_MONTH } from "@/lib/plans";
 import { normalizePhone } from "@/lib/sms/rules";
@@ -74,8 +75,8 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
                     </label>
                   ))}
                 </div>
-                <Field label="Your own design" hint={<>Upload the invitation you made in Canva, Minted or with your stationer (PNG, JPG or WebP, up to 8 MB; about 1200 × 1720 px looks best), then choose &ldquo;Your own design&rdquo;. Guests see it on their personal invitation page.{design.imagePath ? " A design is uploaded; choosing a new file replaces it." : ""}</>}>
-                  <input type="file" name="art" accept="image/png,image/jpeg,image/webp" className="text-sm file:mr-3 file:rounded-full file:border file:border-line file:bg-white file:px-3 file:py-1.5 file:text-xs" />
+                <Field label="Your own design" hint={<>Upload the invitation you made in Canva, Minted or with your stationer (PNG, JPG or WebP, up to 8 MB; about 1200 × 1720 px looks best), then choose &ldquo;Your own design&rdquo;. Guests see it on their personal invitation page.{design.imagePath ? " A design is uploaded; uploading another replaces it." : ""}</>}>
+                  <PhotoUpload purpose="invitation" name="artPath" eventId={e.id} label={design.imagePath ? "Replace your design" : "Upload your design"} />
                 </Field>
                 <Field label="Arabic (top)"><Textarea name="arabicText" rows={1} dir="rtl" defaultValue={design.arabicText} className="font-arabic text-lg" /></Field>
                 <Field label="Invitation wording (English)"><Textarea name="englishText" rows={3} defaultValue={design.englishText} /></Field>

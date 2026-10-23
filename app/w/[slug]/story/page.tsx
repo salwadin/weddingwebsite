@@ -1,3 +1,4 @@
+import { photoFrame } from "@/lib/site-style";
 import { notFound } from "next/navigation";
 import { getSite } from "@/lib/site";
 import { SectionTitle } from "@/components/site/parts";
@@ -15,7 +16,7 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
         {w.story.map((s, i) => (
           <section key={s.title} className={`grid items-center gap-10 md:grid-cols-2 ${i % 2 ? "md:[&>img]:order-2" : ""}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={s.image ?? w.gallery[i % Math.max(1, w.gallery.length)] ?? w.heroImage} alt="" className="arch-mask aspect-[4/5] w-full object-cover" />
+            {(s.image || w.gallery[i % Math.max(1, w.gallery.length)] || w.heroImage) && <img src={s.image || w.gallery[i % Math.max(1, w.gallery.length)] || w.heroImage} alt="" className={`${photoFrame(w.theme)} aspect-[4/5] w-full object-cover`} />}
             <div>
               <p className="text-[11px] uppercase tracking-[0.28em] text-[var(--site-accent)]">Chapter {i + 1}</p>
               <h3 className="heading mt-2 text-4xl">{s.title}</h3>

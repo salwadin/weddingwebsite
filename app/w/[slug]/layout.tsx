@@ -1,3 +1,4 @@
+import { patternBg } from "@/lib/site-style";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -35,7 +36,7 @@ export default async function SiteLayout({ children, params }: { children: React
 
   if (site.locked) {
     return (
-      <div className="site jali-bg flex min-h-screen items-center justify-center px-6" data-theme={w.theme.id} style={style}>
+      <div className={`site ${patternBg(w.theme)} flex min-h-screen items-center justify-center px-6`} data-theme={w.theme.id} style={style}>
         <div className="w-full max-w-md text-center">
           {w.culture.showBismillah && <Bismillah className="mb-6" />}
           <h1 className="heading text-5xl">{w.partner1} &amp; {w.partner2}</h1>
