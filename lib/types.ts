@@ -252,7 +252,7 @@ export interface Task {
 export interface OutboxMessage {
   id: string;
   weddingId: string;
-  channel: "email" | "whatsapp";
+  channel: "email" | "whatsapp" | "sms";
   to: string;
   householdId?: string;
   subject: string;

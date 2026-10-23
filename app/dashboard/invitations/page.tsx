@@ -8,8 +8,11 @@ import { Badge, Button, Card, CardHeader, Checkbox, Field, PageHeader, Select, T
 import { CopyButton, WhatsAppButton } from "@/components/dash/nav";
 import { InvitationPreview } from "@/components/dash/invitation-preview";
 import { emailEnabled } from "@/lib/email/resend";
+import { hasFeature, SMS_PER_MONTH } from "@/lib/plans";
+import { normalizePhone } from "@/lib/sms/rules";
+import { smsEnabled } from "@/lib/sms/twilio";
 
-export default async function InvitationsPage({ searchParams }: { searchParams: Promise<{ event?: string; saved?: string; sent?: string }> }) {
+export default async function InvitationsPage({ searchParams }: { searchParams: Promise<{ event?: string; saved?: string; sent?: string; error?: string }> }) {
   const sp = await searchParams;
   const o = await requireOrg("invitations");
   if (!allows(o, "invitation_designer")) return <><PageHeader title="Invitations" description="Each family's personal invitation link is always available on their page in the Guest List." /><UpgradeGate feature="invitation_designer" canManageBilling={can(o.scope, "billing")}>Design invitations for each event in English, Arabic and a second language, personalized with each family's name and an RSVP QR code.</UpgradeGate></>;
@@ -33,6 +36,13 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
   const outbox = d.outbox.filter((m) => m.weddingId === w.id && (!m.householdId || households.some((h) => h.id === m.householdId))).slice(0, 25);
   const publicLink = `/w/${w.slug}/events/${e.id}`;
   const delivering = emailEnabled();
+  // Texting: only on a bought plan (w.plan stays "free" during the trial), and only once Twilio is configured.
+  const texting = smsEnabled(), canText = texting && hasFeature(w.plan, "sms");
+  const { count: textsUsed } = canText
+    ? await o.sb.from("outbox").select("id", { count: "exact", head: true }).eq("wedding_id", w.id).eq("channel", "sms")
+      .in("status", ["sent", "delivered"]).gte("sent_at", new Date(Date.now() - 30 * 864e5).toISOString())
+    : { count: 0 };
+  const textable = invited.filter((h) => normalizePhone(h.phone)).length;
 
   return (
     <>
@@ -43,7 +53,8 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
         ))}
       </div>
       {sp.saved && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-2.5 text-sm text-[#3f5238]">Design saved.</p>}
-      {sp.sent && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-2.5 text-sm text-[#3f5238]">{delivering ? `${sp.sent} messages sent. Email delivery shows in the outbox below; WhatsApp messages are ready to share.` : `${sp.sent} messages queued. See the outbox below. (Delivery is simulated in this demo.)`}</p>}
+      {sp.sent && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-2.5 text-sm text-[#3f5238]">{delivering ? `${sp.sent} messages sent. Email and text delivery shows in the outbox below; WhatsApp messages are ready to share.` : `${sp.sent} messages queued. See the outbox below. (Delivery is simulated in this demo.)`}</p>}
+      {sp.error === "sms_consent" && <p className="mb-4 rounded-xl bg-rose-soft px-4 py-2.5 text-sm text-[#9b4d47]">Nothing was sent. To text guests, tick the box confirming they agreed to receive texts from you.</p>}
 
       <div className="grid gap-5 xl:grid-cols-[1fr_440px]">
         <div className="grid content-start gap-5">
@@ -90,11 +101,27 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
                       <input type="hidden" name="kind" value={a.kind} /><input type="hidden" name="eventId" value={e.id} />
                       <p className="font-medium">{a.title}</p>
                       <p className="mt-1 flex-1 text-xs text-muted">{a.body}</p>
-                      <Select name="channel" className="mt-3 h-8 text-xs"><option value="email">Email</option><option value="whatsapp">WhatsApp</option></Select>
+                      <Select name="channel" className="mt-3 h-8 text-xs" aria-label="Send by">
+                        <option value="email">Email</option>
+                        {texting && <option value="sms" disabled={!canText}>{canText ? "Text message" : "Text message (Plus or Signature)"}</option>}
+                        <option value="whatsapp">WhatsApp</option>
+                      </Select>
+                      {canText && (
+                        <label className="mt-2 flex items-start gap-1.5 text-[11px] leading-snug text-muted">
+                          <Checkbox name="smsConsent" className="mt-0.5" /> If texting: these guests agreed to get texts from us
+                        </label>
+                      )}
                       <Button size="sm" variant="outline" className="mt-2">{a.cta}</Button>
                     </form>
                   ))}
                 </div>
+              )}
+              {canEdit && texting && (
+                <p className="text-xs text-muted">
+                  {canText
+                    ? <>Texts: {textsUsed ?? 0} of {SMS_PER_MONTH[w.plan].toLocaleString()} used in the last 30 days. {textable} of {invited.length} invited households have a US or Canadian mobile number. Every text ends with &ldquo;Reply STOP to opt out&rdquo;.</>
+                    : <>Texting guests is included once you buy Plus or Signature (it isn&apos;t part of the free trial).</>}
+                </p>
               )}
             </div>
           </Card>
@@ -106,15 +133,16 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
               {outbox.map((m) => (
                 <li key={m.id} className="px-5 py-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={m.channel === "whatsapp" ? "sage" : "neutral"}>{m.channel}</Badge>
+                    <Badge tone={m.channel === "whatsapp" ? "sage" : "neutral"}>{m.channel === "sms" ? "text" : m.channel}</Badge>
                     <Badge tone="outline">{m.kind.replace(/_/g, " ")}</Badge>
-                    {delivering && m.channel === "email" && m.status && m.status !== "pending" && m.status !== "skipped" && (
+                    {((delivering && m.channel === "email") || (texting && m.channel === "sms")) && m.status && m.status !== "pending" && m.status !== "skipped" && (
                       <Badge tone={m.status === "bounced" || m.status === "failed" || m.status === "complained" ? "rose" : "sage"} title={m.error}>{m.status}</Badge>
                     )}
                     <span className="text-xs text-muted">to {m.to} · {new Date(m.createdAt).toLocaleString()}</span>
                   </div>
                   <p className="mt-1 font-medium">{m.subject}</p>
                   <p className="text-xs text-muted">{m.body}</p>
+                  {m.channel === "sms" && m.status === "failed" && m.error && <p className="mt-1 text-xs text-[#9b4d47]">{m.error}</p>}
                 </li>
               ))}
             </ul>

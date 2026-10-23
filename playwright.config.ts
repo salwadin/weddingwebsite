@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 import { RESEND_MOCK_URL } from "./tests/resend-mock";
+import { TWILIO_MOCK_URL, TWILIO_TEST } from "./tests/twilio-mock";
 
 // Same settings as the app (Supabase URL/keys, INVITE_TOKEN_SECRET, QUBOOL_DEMO=on).
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
@@ -39,6 +40,9 @@ export default defineConfig({
       QUBOOL_STAFF_EMAILS: "planner@example.com", // reviews applications in tests/programs.spec.ts
       RESEND_API_KEY: "re_test_mock", RESEND_API_URL: RESEND_MOCK_URL, EMAIL_FROM: "Qubool <invitations@qubool.test>",
       RESEND_WEBHOOK_SECRET: process.env.RESEND_WEBHOOK_SECRET, CRON_SECRET: process.env.CRON_SECRET,
+      // Texts go to the mock Twilio API in tests/twilio-mock.ts; tests/sms.spec.ts texts through the demo wedding.
+      TWILIO_ACCOUNT_SID: TWILIO_TEST.sid, TWILIO_AUTH_TOKEN: TWILIO_TEST.token, TWILIO_FROM: TWILIO_TEST.from, TWILIO_API_URL: TWILIO_MOCK_URL,
+      QUBOOL_SMS_DEMO_ROWS: "send",
     },
   },
 });

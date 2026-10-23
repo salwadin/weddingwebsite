@@ -6,6 +6,8 @@ import { deriveToken } from "../tokens";
 import { DEMO_WEDDING_ID } from "../seed";
 import { isDemoOutboxRow } from "../demo-rules";
 import { emailEnabled, sendBatch, type OutgoingEmail } from "./resend";
+import { deliverSmsPending } from "../sms/deliver";
+import { smsEnabled } from "../sms/twilio";
 import {
   betaInviteEmail, collaboratorInviteEmail, foundingApprovedEmail, inquiryEmail, invitationEmail, linkResendEmail, reminderEmail, saveTheDateEmail, type Email,
 } from "./templates";
@@ -109,15 +111,26 @@ async function deliverChunk(admin: Supabase, ids: string[], origin: string): Pro
 }
 
 /**
- * Sends what a server action just queued. Never throws: the messages are in the
- * outbox either way, and the cron route retries anything left pending.
+ * Sends what a server action just queued: email by default, texts with `channel: "sms"`.
+ * Never throws: the messages are in the outbox either way, and the cron routes retry
+ * anything left pending.
  */
-export async function deliverNow(filter: { weddingId?: string; kind?: string }) {
-  if (!emailEnabled()) return;
-  try {
-    await deliverPending(adminClient(), { origin: await siteUrl("/"), ...filter });
-  } catch (e) {
-    console.error("Email delivery failed:", e);
+export async function deliverNow(filter: { weddingId?: string; kind?: string; channel?: "email" | "sms" }) {
+  const origin = await siteUrl("/");
+  const { channel, ...rest } = filter;
+  if (emailEnabled() && channel !== "sms") {
+    try {
+      await deliverPending(adminClient(), { origin, ...rest });
+    } catch (e) {
+      console.error("Email delivery failed:", e);
+    }
+  }
+  if (smsEnabled() && channel === "sms") {
+    try {
+      await deliverSmsPending(adminClient(), { origin, weddingId: rest.weddingId });
+    } catch (e) {
+      console.error("SMS delivery failed:", e);
+    }
   }
 }
 

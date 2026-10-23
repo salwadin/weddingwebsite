@@ -115,6 +115,17 @@ Supabase's built-in mailer is for testing only (a handful of emails an hour), so
 
 Local Supabase keeps using its own inbox (http://127.0.0.1:54324); `config.toml` leaves `[auth.email.smtp]` off.
 
+### Text messages (Twilio)
+
+Couples on a **bought** Plus or Signature plan (not the free trial) can text guests their invitation, save-the-date or RSVP reminder from **Invitations**, after ticking that their guests agreed to texts. Every text is built at send time from the household's phone on file and current link (`lib/sms/deliver.ts`), names the sender, and ends with "Reply STOP to opt out". Twilio enforces STOP; a text to someone who opted out is recorded as failed with the reason. Allowances: 500 texts per 30 days on Plus, 2,000 on Signature (`SMS_PER_MONTH` in `lib/plans.ts`). Only US and Canadian numbers, since a toll-free sender can't text abroad. The demo never texts (demo wedding, 555 numbers).
+
+| Variable | |
+|---|---|
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | From the Twilio console. The auth token also verifies delivery callbacks at `/api/twilio/status`. |
+| `TWILIO_FROM` | The verified toll-free number (`+18885550123`) or a Messaging Service SID (`MG…`). |
+
+Without all three, the SMS option is hidden and nothing is texted. Tests use a mock Twilio (`tests/twilio-mock.ts`). Public pages Twilio's toll-free verification asks for: `/sms` (program and opt-in), `/privacy`, `/terms`.
+
 ### Test modes
 
 On the landing page, choose an identity under **Live demo**, or use the floating **Demo** switcher at the bottom of any page:

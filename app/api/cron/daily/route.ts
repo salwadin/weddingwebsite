@@ -1,6 +1,10 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { deliverPending, failStuck } from "@/lib/email/deliver";
+import { emailEnabled } from "@/lib/email/resend";
 import { loadDemoSeed } from "@/lib/seed-load";
+import { deliverSmsPending } from "@/lib/sms/deliver";
+import { smsEnabled } from "@/lib/sms/twilio";
 import { demoEnabled } from "@/lib/supabase/env";
 import { adminClient } from "@/lib/supabase/server";
 
@@ -8,6 +12,7 @@ import { adminClient } from "@/lib/supabase/server";
  * Daily housekeeping, run by Vercel Cron (vercel.json) with `Authorization: Bearer $CRON_SECRET`:
  *  - Founding Vendors whose free Featured year has ended go back to Basic (unless they subscribe).
  *  - The public demo is restored to its original state (when QUBOOL_DEMO=on).
+ *  - Email and texts left pending (a provider outage or rate limit) are retried.
  */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -20,6 +25,10 @@ export async function GET(req: Request) {
   if (error) console.error("expire_founding_listings:", error.message);
   let demoReset = false;
   if (demoEnabled()) { await loadDemoSeed(admin); demoReset = true; }
+  const origin = new URL(req.url).origin;
+  const stuck = await failStuck(admin);
+  const email = emailEnabled() ? await deliverPending(admin, { origin }).catch((e) => ({ error: String(e) })) : null;
+  const sms = smsEnabled() ? await deliverSmsPending(admin, { origin }).catch((e) => ({ error: String(e) })) : null;
   revalidatePath("/", "layout");
-  return Response.json({ foundingExpired: expired ?? 0, demoReset, at: new Date().toISOString() });
+  return Response.json({ foundingExpired: expired ?? 0, demoReset, email, sms, stuck, at: new Date().toISOString() });
 }

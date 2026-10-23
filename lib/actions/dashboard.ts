@@ -7,7 +7,8 @@ import { siteUrl } from "../auth";
 import { deliverNow } from "../email/deliver";
 import { canEditEvent, canTouchHousehold, type Area } from "../access";
 import { assertFeature, requireOrg, type Org } from "../dashboard";
-import { PLANS } from "../plans";
+import { hasFeature, PLANS } from "../plans";
+import { normalizePhone, smsText } from "../sms/rules";
 import { DEMO_WEDDING_ID } from "../seed";
 import { loadDemoSeed } from "../seed-load";
 import { demoEnabled } from "../supabase/env";
@@ -384,14 +385,20 @@ export async function saveDesign(form: FormData) {
   redirect(`/dashboard/invitations?event=${eventId}&saved=1`);
 }
 
-/** Queue messages to the outbox and send the email ones (lib/email/deliver.ts). kind: invitation | reminder | save_the_date. */
+/** Queue messages to the outbox and send the email and SMS ones (lib/email, lib/sms). kind: invitation | reminder | save_the_date. */
 export async function sendMessages(form: FormData) {
   const o = await edit("invitations");
   const kind = str(form, "kind") as "invitation" | "reminder" | "save_the_date";
   const eventId = str(form, "eventId");
-  const channel = str(form, "channel") === "whatsapp" ? "whatsapp" : "email";
+  const c = str(form, "channel");
+  const channel = c === "whatsapp" || c === "sms" ? c : "email";
   const e = o.events.find((x) => x.id === eventId);
   const w = o.ctx.wedding;
+  if (channel === "sms") {
+    // A bought plan, not the free trial (w.plan stays "free" during one); delivery checks again.
+    if (!hasFeature(w.plan, "sms")) throw new Error("Texting guests is part of Plus and Signature.");
+    if (str(form, "smsConsent") !== "on") redirect(`/dashboard/invitations?event=${eventId}&error=sms_consent`);
+  }
   let targets = o.households;
   if (e) targets = targets.filter((h) => o.d.invitations.some((i) => i.householdId === h.id && i.eventId === e.id));
   if (kind === "invitation") targets = targets.filter((h) => h.deliveryStatus === "not_sent");
@@ -401,7 +408,7 @@ export async function sendMessages(form: FormData) {
       return inv.guestIds.some((g) => !o.d.rsvps.some((r) => r.guestId === g && r.eventId === e.id));
     });
   }
-  targets = targets.filter((h) => (channel === "email" ? h.email : h.phone));
+  targets = targets.filter((h) => (channel === "email" ? h.email : channel === "sms" ? normalizePhone(h.phone) : h.phone));
   const base = await siteUrl("/");
   await mutate(o, (d) => {
     for (const h of targets) {
@@ -410,16 +417,18 @@ export async function sendMessages(form: FormData) {
       const link = new URL(`/i/${t.token}`, base).toString();
       const subject = kind === "save_the_date" ? `Save the date · ${w.partner1} & ${w.partner2}`
         : kind === "reminder" ? `Kind reminder to RSVP · ${e?.name ?? "our wedding"}` : `You're invited · ${w.partner1} & ${w.partner2}`;
-      const body = kind === "reminder"
+      const body = channel === "sms"
+        ? smsText(kind, { partner1: w.partner1, partner2: w.partner2, household: h.name, link: kind === "reminder" ? `${link}?to=rsvp` : link, event: e?.name })
+        : kind === "reminder"
         ? `Assalamu alaikum ${h.name}, we'd love to know if you can join us for the ${e?.name}. Please reply here: ${link}?to=rsvp`
         : `Assalamu alaikum ${h.name}, ${kind === "save_the_date" ? "please save the date for" : "you are warmly invited to"} the wedding of ${w.partner1} & ${w.partner2}. Your personal invitation: ${link}`;
-      d.outbox.unshift({ id: uid("msg"), weddingId: w.id, channel, to: channel === "email" ? h.email! : h.phone!, householdId: h.id, subject, body, kind, eventId: e?.id, createdAt: new Date().toISOString() });
+      d.outbox.unshift({ id: uid("msg"), weddingId: w.id, channel, to: channel === "email" ? h.email! : channel === "sms" ? normalizePhone(h.phone)! : h.phone!, householdId: h.id, subject, body, kind, eventId: e?.id, createdAt: new Date().toISOString() });
       const hh = d.households.find((x) => x.id === h.id)!;
       if (kind === "invitation") hh.deliveryStatus = "sent";
     }
     audit(d, w.id, o.ctx.user.name, `send_${kind}`, `${targets.length} ${channel} messages${e ? ` · ${e.name}` : ""}`);
   });
-  if (channel === "email") await deliverNow({ weddingId: w.id });
+  if (channel !== "whatsapp") await deliverNow({ weddingId: w.id, channel });
   refresh(o);
   redirect(`/dashboard/invitations?event=${eventId}&sent=${targets.length}`);
 }
