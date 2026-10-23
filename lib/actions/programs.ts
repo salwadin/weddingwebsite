@@ -108,11 +108,13 @@ export async function reviewBetaApplication(decision: string, form: FormData) {
   const staff = await requireStaff();
   const id = str(form, "id", 40), notes = str(form, "staff_notes", 2000);
   const admin = adminClient();
-  const { data: app } = await admin.from("beta_applications").select("email,status").eq("id", id).maybeSingle();
+  const { data: app } = await admin.from("beta_applications").select("email,status,invited_at").eq("id", id).maybeSingle();
   if (!app) return;
   if (form.has("staff_notes")) await admin.from("beta_applications").update({ staff_notes: notes || null }).eq("id", id);
 
-  if (decision === "invite" && app.status !== "joined") {
+  // Repeat clicks (or a second staff member) within a couple of minutes don't send the invite again.
+  const justInvited = !!app.invited_at && Date.now() - new Date(app.invited_at as string).getTime() < 2 * 60_000;
+  if (decision === "invite" && app.status !== "joined" && !justInvited) {
     await admin.from("beta_applications").update({ status: "invited", invited_at: new Date().toISOString(), reviewed_by: staff.email }).eq("id", id);
     await queueEmail("beta_invite", app.email as string, "You're invited to the Qubool beta");
   } else if (decision === "decline") {

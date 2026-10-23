@@ -90,7 +90,7 @@ test("staff approve a founding vendor: numbered, emailed, and the listing is Fea
   await page.goto("/admin?tab=vendors&status=pending");
   const card = page.locator("div.rounded-2xl", { hasText: "Noor Light Studios" }).filter({ has: page.getByRole("button", { name: /Approve/ }) });
   await card.getByRole("button", { name: /Approve/ }).click();
-  await expect(card).toHaveCount(0); // leaves the pending list
+  await expect(page.locator("div.rounded-2xl", { hasText: "Noor Light Studios" })).toHaveCount(0); // leaves the pending list
   await page.goto("/admin?tab=vendors&status=approved");
   await expect(page.locator("div.rounded-2xl", { hasText: "Noor Light Studios" }).getByText(/Founding #\d+/)).toBeVisible();
 
@@ -114,7 +114,7 @@ test("staff invite a beta applicant", async ({ page }) => {
   await page.goto("/admin?tab=beta&status=new");
   const card = page.locator("div.rounded-2xl", { hasText: "Mei Chen" }).filter({ has: page.getByRole("button", { name: "Invite" }) });
   await card.getByRole("button", { name: "Invite" }).click();
-  await expect(card).toHaveCount(0); // leaves the "new" list once the invite is saved
+  await expect(page.locator("div.rounded-2xl", { hasText: "Mei Chen" })).toHaveCount(0); // leaves the "new" list once the invite is saved
   await page.goto("/admin?tab=beta&status=invited");
   await expect(page.getByText("Mei Chen")).toBeVisible();
   const { data } = await admin.from("beta_applications").select("status,invited_at").eq("id", app!.id).single();
@@ -122,4 +122,11 @@ test("staff invite a beta applicant", async ({ page }) => {
   expect(data!.invited_at).toBeTruthy();
   const { data: mail } = await admin.from("outbox").select("kind").eq("recipient", email);
   expect(mail).toEqual([{ kind: "beta_invite" }]);
+
+  // Resending straight away (an impatient double click) doesn't email them again.
+  const invited = page.locator("div.rounded-2xl", { hasText: "Mei Chen" }).filter({ has: page.getByRole("button", { name: "Resend invite" }) });
+  await invited.getByRole("button", { name: "Resend invite" }).click();
+  await expect(invited.getByRole("button", { name: "Resend invite" })).toBeEnabled(); // pending state cleared: the action finished
+  const { data: after } = await admin.from("outbox").select("kind").eq("recipient", email);
+  expect(after).toHaveLength(1);
 });
