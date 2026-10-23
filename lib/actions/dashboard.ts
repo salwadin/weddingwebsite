@@ -8,7 +8,7 @@ import { deliverNow } from "../email/deliver";
 import { canEditEvent, canTouchHousehold, type Area } from "../access";
 import { assertFeature, requireOrg, type Org } from "../dashboard";
 import { hasFeature, PLANS } from "../plans";
-import { uploadArt } from "../invitation-art";
+import { ownsPath, photoUrl, removePhotos } from "../uploads";
 import { normalizePhone, smsText } from "../sms/rules";
 import { DEMO_WEDDING_ID } from "../seed";
 import { loadDemoSeed } from "../seed-load";
@@ -375,14 +375,10 @@ export async function saveDesign(form: FormData) {
   const back = (q: string) => redirect(`/dashboard/invitations?event=${eventId}&${q}`);
   const t = str(form, "template");
   const template = (["arch", "jali", "minimal", "custom"].includes(t) ? t : "arch") as InvitationDesign["template"];
-  // The couple's own artwork: stored privately, shown to guests through signed links (lib/invitation-art.ts).
-  const file = form.get("art");
-  let imagePath: string | undefined;
-  if (file instanceof File && file.size > 0) {
-    const up = await uploadArt(o.ctx.wedding.id, eventId, file);
-    if ("error" in up) back(`artError=${encodeURIComponent(up.error)}`);
-    else imagePath = up.path;
-  }
+  // The couple's own artwork, already uploaded by the browser (lib/uploads.ts); stored privately,
+  // shown to guests through signed links (lib/invitation-art.ts).
+  const uploaded = str(form, "artPath", 200);
+  const imagePath = uploaded && ownsPath("invitation", uploaded, o.ctx.wedding.id, eventId) ? uploaded : undefined;
   const existing = o.d.designs.find((x) => x.eventId === eventId && x.weddingId === o.ctx.wedding.id);
   if (template === "custom" && !imagePath && !existing?.imagePath) back(`artError=${encodeURIComponent("Upload your design image to use your own design.")}`);
   await mutate(o, (d) => {
@@ -591,14 +587,22 @@ export async function saveWebsite(form: FormData) {
   const slug = str(form, "slug", 60).toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
   // Another wedding's slug is rejected by the unique index when this saves ("That web address is taken").
   const lines = (k: string, max = 8000) => str(form, k, max).split("\n").map((s) => s.trim()).filter(Boolean);
+  // Photos the browser already uploaded (lib/uploads.ts): only paths in this wedding's own folder count.
+  const W = o.ctx.wedding.id;
+  const uploaded = (k: string) => form.getAll(k).map(String).filter((p) => ownsPath("gallery", p, W)).map(photoUrl);
+  const [newCover] = uploaded("coverPath");
+  const removed = form.getAll("removeGallery").map(String);
+  const oldCover = o.ctx.wedding.heroImage;
+  const dropCover = bool(form, "removeCover") || !!newCover;
   await mutate(o, (d) => {
     const w = d.weddings.find((x) => x.id === o.ctx.wedding.id)!;
     Object.assign(w, {
       slug: slug || w.slug,
       partner1: str(form, "partner1", 60) || w.partner1, partner2: str(form, "partner2", 60) || w.partner2,
       partner1Family: str(form, "partner1Family", 60), partner2Family: str(form, "partner2Family", 60),
-      tagline: str(form, "tagline", 200), heroImage: str(form, "heroImage", 500) || w.heroImage,
-      gallery: lines("gallery"),
+      tagline: str(form, "tagline", 200),
+      heroImage: newCover ?? (bool(form, "removeCover") ? "" : w.heroImage),
+      gallery: [...w.gallery.filter((u) => !removed.includes(u)), ...uploaded("galleryPaths")].slice(0, 60),
       story: str(form, "story", 10000).split(/\n\s*\n/).map((block) => { const [title, ...body] = block.trim().split("\n"); return { title: title.replace(/^#+\s*/, ""), body: body.join(" ").trim() }; }).filter((s) => s.title && s.body),
       faqs: str(form, "faqs", 10000).split(/\n\s*\n/).map((block) => { const [q, ...a] = block.trim().split("\n"); return { q: q.replace(/^Q:\s*/i, ""), a: a.join(" ").replace(/^A:\s*/i, "").trim() }; }).filter((f) => f.q && f.a),
       travel: {
@@ -606,7 +610,7 @@ export async function saveWebsite(form: FormData) {
         hotels: lines("hotels").map((l) => { const [name, ...note] = l.split("|"); return { name: name.trim(), note: note.join("|").trim() }; }),
       },
       registry: { message: str(form, "registryMessage", 1000), links: lines("registryLinks").map((l) => { const [label, url] = l.split("|"); return { label: label.trim(), url: (url ?? "").trim() }; }).filter((l) => /^https?:\/\//.test(l.url)) },
-      theme: { id: str(form, "themeId") || "noor", heading: str(form, "heading") || "cormorant", pattern: str(form, "pattern") || "arch", accent: /^#[0-9a-f]{6}$/i.test(str(form, "accent")) ? str(form, "accent") : undefined } as ThemeSettings,
+      theme: { id: str(form, "themeId") || "noor", heading: str(form, "heading") || "cormorant", pattern: (["none", "arch", "jali"].includes(str(form, "pattern")) ? str(form, "pattern") : "none"), accent: /^#[0-9a-f]{6}$/i.test(str(form, "accent")) ? str(form, "accent") : undefined } as ThemeSettings,
       culture: {
         ...w.culture,
         showBismillah: bool(form, "showBismillah"), islamicDates: bool(form, "islamicDates"),
@@ -619,6 +623,8 @@ export async function saveWebsite(form: FormData) {
     });
     audit(d, w.id, o.ctx.user.name, "website_update", "Website settings saved");
   });
+  // Free the storage of photos the couple removed or replaced (pasted links and stock photos are left alone).
+  await removePhotos(W, [...removed, ...(dropCover && oldCover ? [oldCover] : [])]);
   revalidatePath("/", "layout");
   redirect("/dashboard/website?saved=1");
 }

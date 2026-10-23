@@ -29,7 +29,12 @@ async function uploadDesign(page: import("@playwright/test").Page, eventId: stri
   await page.goto(`/dashboard/invitations?event=${eventId}`);
   const form = page.locator("form").filter({ hasText: "Your own design" }).first();
   await form.locator("label", { has: page.locator('input[name="template"][value="custom"]') }).click();
-  if (file) await form.locator('input[type="file"]').setInputFiles(file);
+  if (file) {
+    await form.locator('input[data-upload="invitation"]').setInputFiles(file);
+    // Uploads go straight to storage first; images show as ready, anything else is refused right away.
+    if (file.mimeType.startsWith("image/")) await expect(form.getByText(/ready\. Save to keep it/)).toBeVisible();
+    else return;
+  }
   await form.getByRole("button", { name: "Save design" }).click();
 }
 
@@ -85,7 +90,7 @@ test("uploads are checked: images only, and your own design needs an image", asy
   await admin.from("invitation_designs").update({ template: "arch", image_path: null }).eq("event_id", DEMO_EVENTS.walima);
   await loginAs(page, "ayesha@example.com");
   await uploadDesign(page, DEMO_EVENTS.walima, { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("not an image") });
-  await expect(page.getByText("Please upload a PNG, JPG or WebP image.")).toBeVisible();
+  await expect(page.getByText("Please choose a PNG, JPG or WebP image.")).toBeVisible();
   await uploadDesign(page, DEMO_EVENTS.walima, null);
   await expect(page.getByText("Upload your design image to use your own design.")).toBeVisible();
   const { data } = await admin.from("invitation_designs").select("template,image_path").eq("event_id", DEMO_EVENTS.walima).single();

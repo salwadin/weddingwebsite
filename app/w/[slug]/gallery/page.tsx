@@ -1,3 +1,4 @@
+import { photoFrame } from "@/lib/site-style";
 import { notFound } from "next/navigation";
 import { getSite } from "@/lib/site";
 import { SectionTitle } from "@/components/site/parts";
@@ -13,7 +14,7 @@ export default async function GalleryPage({ params }: { params: Promise<{ slug: 
       <div className="mt-12 columns-1 gap-5 sm:columns-2 lg:columns-3">
         {site.wedding.gallery.map((src, i) => (
           // eslint-disable-next-line @next/next/no-img-element
-          <img key={src} src={src} alt="" loading="lazy" className={`mb-5 w-full break-inside-avoid object-cover ${i % 3 === 0 ? "arch-mask aspect-[3/4]" : "rounded-3xl"}`} />
+          <img key={src} src={src} alt="" loading="lazy" className={`mb-5 w-full break-inside-avoid object-cover ${i % 3 === 0 ? `${photoFrame(site.wedding.theme)} aspect-[3/4]` : "rounded-3xl"}`} />
         ))}
       </div>
     </div>

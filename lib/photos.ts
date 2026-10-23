@@ -17,4 +17,3 @@ export const SITE_PHOTOS = {
 } as const;
 
 /** The cover photo a brand-new wedding website starts with (suits any tradition). */
-export const DEFAULT_HERO = u("1791810182741-0647d2338534", 2000);

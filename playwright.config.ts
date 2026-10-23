@@ -43,6 +43,7 @@ export default defineConfig({
       // Texts go to the mock Twilio API in tests/twilio-mock.ts; tests/sms.spec.ts texts through the demo wedding.
       TWILIO_ACCOUNT_SID: TWILIO_TEST.sid, TWILIO_AUTH_TOKEN: TWILIO_TEST.token, TWILIO_FROM: TWILIO_TEST.from, TWILIO_API_URL: TWILIO_MOCK_URL,
       QUBOOL_SMS_DEMO_ROWS: "send",
+      QUBOOL_DEMO_UPLOADS: "on", // tests/invitation.spec.ts and tests/website.spec.ts upload images to the demo wedding
     },
   },
 });
