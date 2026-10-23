@@ -31,7 +31,7 @@ export const TABLES: Record<TableKey, TableSpec> = {
   events: { table: "events", write: "upsert", lists: ["mealOptions", "timeline", "palette"],
     strings: ["startTime", "endTime", "venueName", "address", "dressCode", "description", "publicMessage"],
     fields: ["id", "weddingId", "type", "name", "date", "startTime", "endTime", "venueName", "address", "dressCode", "description",
-      "publicMessage", "hostSide", "visibility", "rsvpMode", "rsvpDeadline", "capacity", "waitlist", "mealOptions", "timeline",
+      "publicMessage", "hostSide", "sidePrivate", "visibility", "rsvpMode", "rsvpDeadline", "capacity", "waitlist", "mealOptions", "timeline",
       "genderSeparated", "womenOnly", "noPhotography", "prayerSpace", "halal", "budget", "sortOrder", "palette"] },
   households: { table: "households", write: "upsert", strings: ["relationship"], lists: ["tags"],
     fields: ["id", "weddingId", "name", "side", "relationship", "tags", "email", "phone", "notes", "deliveryStatus", "createdAt"] },

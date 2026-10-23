@@ -11,7 +11,7 @@ import type { EventType, RsvpMode, Side, ThemeSettings, Visibility, WeddingEvent
 export interface OnboardingInput {
   partner1: string; partner2: string; partner1Family: string; partner2Family: string; role: "bride" | "groom";
   tradition?: string;
-  events: { type: EventType; name: string; date: string; startTime: string; venueName: string; address: string; visibility: Visibility; rsvpMode: RsvpMode; hostSide: Side }[];
+  events: { type: EventType; name: string; date: string; startTime: string; venueName: string; address: string; visibility: Visibility; rsvpMode: RsvpMode; hostSide: Side; sidePrivate?: boolean }[];
   theme: ThemeSettings["id"];
   households: { name: string; members: string[]; side: Side }[];
   assign: Record<string, { bride: boolean; groom: boolean }>; // event index → which sides are invited
@@ -72,6 +72,7 @@ export async function createWedding(input: OnboardingInput): Promise<{ error?: s
         venueName: clean(e.venueName, 120), address: clean(e.address, 200), dressCode: "", description: "",
         publicMessage: e.visibility === "public" ? `We would be honored to have you join us for our ${clean(e.name)}.` : "",
         hostSide: (["bride", "groom", "both"] as const).includes(e.hostSide) ? e.hostSide : "both",
+        sidePrivate: !!e.sidePrivate && e.hostSide !== "both" && (["bride", "groom"] as const).includes(e.hostSide),
         visibility: (["public", "invite", "private"] as const).includes(e.visibility) ? e.visibility : "invite",
         rsvpMode: (["required", "optional", "none"] as const).includes(e.rsvpMode) ? e.rsvpMode : "required", waitlist: false,
         mealOptions: [], timeline: [], genderSeparated: e.type === "nikkah", womenOnly: false, noPhotography: false, prayerSpace: true, halal: true, budget: 0, sortOrder: i + 1,
