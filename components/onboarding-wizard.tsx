@@ -76,7 +76,13 @@ export function OnboardingWizard({ action, userName }: { action: (i: OnboardingI
   const [slug, setSlug] = useState("");
 
   const label = (t: EventType) => EVENT_TYPES.find((x) => x.value === t)?.label ?? "Event";
-  const ev = (k: string): Ev => events[k] ?? { type: k as EventType, name: label(k as EventType), date: "", startTime: "18:00", venueName: "", address: "", ...(DEFAULTS[k] ?? { visibility: "invite", rsvpMode: "required", hostSide: "both" }) };
+  const ev = (k: string): Ev => {
+    if (events[k]) return events[k];
+    const d = DEFAULTS[k] ?? { visibility: "invite" as Visibility, rsvpMode: "required" as RsvpMode, hostSide: "both" as Side };
+    // Family-only events hosted by one side start private to that side (its organizers only).
+    return { type: k as EventType, name: label(k as EventType), date: "", startTime: "18:00", venueName: "", address: "", ...d, sidePrivate: d.visibility === "private" && d.hostSide !== "both" };
+  };
+  const family = (s: Side) => (s === "bride" ? `${names.partner1 || "First partner"}'s family` : s === "groom" ? `${names.partner2 || "Second partner"}'s family` : "Both families");
   const setEv = (k: string, patch: Partial<Ev>) => setEvents((p) => ({ ...p, [k]: { ...ev(k), ...patch } }));
   // A couple's own event (a Shaalima, a family dinner…): invitation-only and shared by both families until they say otherwise.
   const addOwn = () => {
@@ -218,6 +224,21 @@ export function OnboardingWizard({ action, userName }: { action: (i: OnboardingI
                       </button>
                     ))}
                   </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+                    <label className="flex items-center gap-2">Hosted by
+                      <Select value={ev(t).hostSide} aria-label={`Who hosts the ${ev(t).name}`} className="h-9 w-auto text-xs"
+                        onChange={(e) => { const hostSide = e.target.value as Side; setEv(t, { hostSide, sidePrivate: hostSide !== "both" && ev(t).sidePrivate }); }}>
+                        {(["both", "bride", "groom"] as const).map((s) => <option key={s} value={s}>{family(s)}</option>)}
+                      </Select>
+                    </label>
+                    {ev(t).hostSide !== "both" && (
+                      <label className="flex items-center gap-1.5">
+                        <Checkbox checked={!!ev(t).sidePrivate} onChange={(e) => setEv(t, { sidePrivate: e.target.checked })} />
+                        Private to {family(ev(t).hostSide)}
+                      </label>
+                    )}
+                  </div>
+                  {ev(t).hostSide !== "both" && ev(t).sidePrivate && <p className="mt-1 text-xs text-muted">The other family&apos;s organizers won&apos;t see this event or any of its costs.</p>}
                 </div>
               ))}
             </div>

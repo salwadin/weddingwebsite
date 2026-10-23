@@ -10,7 +10,7 @@ import { CopyButton, ConfirmButton } from "@/components/dash/nav";
 
 const BLANK: Omit<WeddingEvent, "id" | "weddingId"> = {
   type: "custom", name: "", date: "", startTime: "18:00", endTime: "22:00", venueName: "", address: "", dressCode: "", description: "",
-  publicMessage: "", hostSide: "both", visibility: "invite", rsvpMode: "required", waitlist: false, mealOptions: [], timeline: [],
+  publicMessage: "", hostSide: "both", sidePrivate: false, visibility: "invite", rsvpMode: "required", waitlist: false, mealOptions: [], timeline: [],
   genderSeparated: false, womenOnly: false, noPhotography: false, prayerSpace: true, halal: true, budget: 0, sortOrder: 99,
 };
 
@@ -54,6 +54,10 @@ export default async function EventEditor({ params, searchParams }: { params: Pr
                 </Field>
                 <Field label="Description" className="sm:col-span-2"><Textarea name="description" rows={3} defaultValue={e.description} /></Field>
                 <Field label="Hosted by"><Select name="hostSide" defaultValue={e.hostSide}>{Object.entries(SIDES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></Field>
+                <label className="flex items-start gap-2 self-end pb-2 text-sm">
+                  <Checkbox name="sidePrivate" defaultChecked={e.sidePrivate} className="mt-0.5" />
+                  <span>Private to the hosting family<span className="block text-xs text-muted">For a Mehndi, a girls-only night or a family dinner: the other side&apos;s organizers won&apos;t see this event or any of its costs. Doesn&apos;t apply to events hosted by both sides.</span></span>
+                </label>
                 <Field label="Event budget (USD)"><Input type="number" name="budget" defaultValue={e.budget || ""} min={0} /></Field>
               </div>
             </Card>

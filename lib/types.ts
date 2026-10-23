@@ -120,6 +120,8 @@ export interface WeddingEvent {
   description: string;
   publicMessage: string;
   hostSide: Side;
+  /** Hidden from the other side's organizers (with all its costs): a Mehndi, a girls-only night… Only for one-side events. */
+  sidePrivate: boolean;
   visibility: Visibility;
   rsvpMode: RsvpMode;
   rsvpDeadline?: string;

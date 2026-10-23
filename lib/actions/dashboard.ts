@@ -82,6 +82,8 @@ export async function saveEvent(form: FormData) {
     palette: str(form, "palette", 200).split(/[,\s]+/).filter((c) => /^#[0-9a-f]{6}$/i.test(c)).slice(0, 8),
   };
   if (o.scope.side && values.hostSide !== o.scope.side && values.hostSide !== "both") values.hostSide = o.scope.side;
+  // Only an event hosted by one side can be private to it.
+  values.sidePrivate = bool(form, "sidePrivate") && values.hostSide !== "both";
   let newId = id;
   await mutate(o, (d) => {
     if (existing) {

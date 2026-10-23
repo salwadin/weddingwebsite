@@ -36,6 +36,7 @@ export default async function EventsPage() {
                     <Badge tone={e.visibility === "public" ? "sage" : e.visibility === "private" ? "rose" : "gold"}><Icon className="h-3 w-3" />{VISIBILITY[e.visibility].label}</Badge>
                     <Badge tone="outline">{RSVP_MODES[e.rsvpMode]}</Badge>
                     <Badge tone="outline">Hosted by {SIDES[e.hostSide].toLowerCase()}</Badge>
+                    {e.sidePrivate && e.hostSide !== "both" && <Badge tone="rose">Private to {SIDES[e.hostSide].toLowerCase()}</Badge>}
                     {e.capacity && <Badge tone="outline">Cap {e.capacity}{e.waitlist ? " + waitlist" : ""}</Badge>}
                   </div>
                 </div>

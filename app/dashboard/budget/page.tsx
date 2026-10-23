@@ -22,7 +22,7 @@ export default async function BudgetPage() {
 
   return (
     <>
-      <PageHeader title="Budget" description={scope.side ? `Showing expenses that are the ${scope.side}'s family's responsibility, plus shared costs.` : "Track costs by event and category, and see who is responsible for each."} />
+      <PageHeader title="Budget" description={scope.side ? `Showing expenses that are the ${scope.side}'s family's responsibility, plus shared costs. Costs of events private to the other family aren't shown.` : "Track costs by event and category, and see who is responsible for each."} />
       <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
         <Card className="p-6">
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
