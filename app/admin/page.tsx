@@ -7,7 +7,8 @@ import { TRADITION_LABELS } from "@/lib/marketplace";
 import { FOUNDING_SPOTS } from "@/lib/programs";
 import { requireStaff } from "@/lib/staff";
 import { adminClient } from "@/lib/supabase/server";
-import { Badge, Button, Card, Logo, Stat, Textarea } from "@/components/ui";
+import { Badge, Card, Logo, Stat, Textarea } from "@/components/ui";
+import { PendingButton } from "@/components/pending-button";
 
 export const metadata = { title: "Qubool admin", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -102,11 +103,11 @@ export default async function Admin({ searchParams }: { searchParams: Promise<SP
                 <input type="hidden" name="id" value={a.id} />
                 <Textarea name="staff_notes" rows={1} defaultValue={a.staff_notes ?? ""} placeholder="Private notes" aria-label="Private notes" />
                 <div className="flex flex-wrap items-start gap-1.5">
-                  {a.status !== "approved" && <Button size="sm" formAction={reviewVendorApplication.bind(null, "approve")}>{founding < FOUNDING_SPOTS ? "Approve · founding" : "Approve"}</Button>}
-                  {a.status === "pending" && <Button size="sm" variant="outline" formAction={reviewVendorApplication.bind(null, "waitlist")}>Waitlist</Button>}
-                  {a.status !== "declined" && a.status !== "approved" && <Button size="sm" variant="danger" formAction={reviewVendorApplication.bind(null, "decline")}>Decline</Button>}
-                  {(a.status === "declined" || a.status === "waitlisted") && <Button size="sm" variant="ghost" formAction={reviewVendorApplication.bind(null, "reopen")}>Reopen</Button>}
-                  <Button size="sm" variant="ghost" formAction={reviewVendorApplication.bind(null, "notes")}>Save notes</Button>
+                  {a.status !== "approved" && <PendingButton size="sm" formAction={reviewVendorApplication.bind(null, "approve")} pendingLabel="Approving…">{founding < FOUNDING_SPOTS ? "Approve · founding" : "Approve"}</PendingButton>}
+                  {a.status === "pending" && <PendingButton size="sm" variant="outline" formAction={reviewVendorApplication.bind(null, "waitlist")} pendingLabel="Saving…">Waitlist</PendingButton>}
+                  {a.status !== "declined" && a.status !== "approved" && <PendingButton size="sm" variant="danger" formAction={reviewVendorApplication.bind(null, "decline")} pendingLabel="Declining…">Decline</PendingButton>}
+                  {(a.status === "declined" || a.status === "waitlisted") && <PendingButton size="sm" variant="ghost" formAction={reviewVendorApplication.bind(null, "reopen")} pendingLabel="Reopening…">Reopen</PendingButton>}
+                  <PendingButton size="sm" variant="ghost" formAction={reviewVendorApplication.bind(null, "notes")} pendingLabel="Saving…">Save notes</PendingButton>
                 </div>
               </form>
               {a.reviewed_by && <p className="mt-2 text-[11px] text-muted">Reviewed by {a.reviewed_by}{a.reviewed_at ? ` on ${shortDate(String(a.reviewed_at).slice(0, 10))}` : ""}</p>}
@@ -138,11 +139,11 @@ export default async function Admin({ searchParams }: { searchParams: Promise<SP
                 <input type="hidden" name="id" value={a.id} />
                 <Textarea name="staff_notes" rows={1} defaultValue={a.staff_notes ?? ""} placeholder="Private notes" aria-label="Private notes" />
                 <div className="flex flex-wrap items-start gap-1.5">
-                  {(a.status === "new" || a.status === "declined") && <Button size="sm" formAction={reviewBetaApplication.bind(null, "invite")}>Invite</Button>}
-                  {a.status === "invited" && <Button size="sm" variant="outline" formAction={reviewBetaApplication.bind(null, "invite")}>Resend invite</Button>}
-                  {a.status === "new" && <Button size="sm" variant="danger" formAction={reviewBetaApplication.bind(null, "decline")}>Decline</Button>}
-                  {a.status === "declined" && <Button size="sm" variant="ghost" formAction={reviewBetaApplication.bind(null, "reopen")}>Reopen</Button>}
-                  <Button size="sm" variant="ghost" formAction={reviewBetaApplication.bind(null, "notes")}>Save notes</Button>
+                  {(a.status === "new" || a.status === "declined") && <PendingButton size="sm" formAction={reviewBetaApplication.bind(null, "invite")} pendingLabel="Sending…">Invite</PendingButton>}
+                  {a.status === "invited" && <PendingButton size="sm" variant="outline" formAction={reviewBetaApplication.bind(null, "invite")} pendingLabel="Sending…">Resend invite</PendingButton>}
+                  {a.status === "new" && <PendingButton size="sm" variant="danger" formAction={reviewBetaApplication.bind(null, "decline")} pendingLabel="Declining…">Decline</PendingButton>}
+                  {a.status === "declined" && <PendingButton size="sm" variant="ghost" formAction={reviewBetaApplication.bind(null, "reopen")} pendingLabel="Reopening…">Reopen</PendingButton>}
+                  <PendingButton size="sm" variant="ghost" formAction={reviewBetaApplication.bind(null, "notes")} pendingLabel="Saving…">Save notes</PendingButton>
                 </div>
               </form>
               {a.invited_at && <p className="mt-2 text-[11px] text-muted">Invited {shortDate(String(a.invited_at).slice(0, 10))}{a.joined_at ? ` · joined ${shortDate(String(a.joined_at).slice(0, 10))}` : ""}</p>}
