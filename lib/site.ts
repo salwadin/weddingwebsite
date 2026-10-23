@@ -3,7 +3,8 @@ import { cache } from "react";
 import { currentUser, guestToken, siteKey } from "./auth";
 import { fromRow, weddingFromRow, type Row } from "./rows";
 import { anonClient, serverClient } from "./supabase/server";
-import type { Guest, Household, Rsvp, Wedding, WeddingEvent } from "./types";
+import { artUrl } from "./invitation-art";
+import type { Guest, Household, InvitationDesign, Rsvp, Wedding, WeddingEvent } from "./types";
 
 /** Wedding fields that are safe to send to any visitor. Never includes mahr, password, budget. */
 export type PublicWedding = Pick<Wedding,
@@ -20,9 +21,14 @@ export interface GuestView {
   rsvps: Pick<Rsvp, "eventId" | "guestId" | "status" | "meal" | "updatedAt">[];
 }
 
+/** An event's invitation as a guest sees it: the designed card's wording, or the couple's uploaded artwork. */
+export type PublicDesign = Pick<InvitationDesign, "eventId" | "template" | "englishText" | "urduText" | "arabicText"> & { imageUrl: string | null };
+
 export interface SiteData {
   wedding: PublicWedding;
   events: PublicEvent[];
+  /** Invitation designs for the events above (only those). */
+  designs: PublicDesign[];
   guest: GuestView | null;
   locked: boolean;
   isOrganizer: boolean;
@@ -56,9 +62,15 @@ export const getSite = cache(async (slug: string): Promise<SiteData | null> => {
     invitations: (h.invitations as Row[]).map((i) => camelize<GuestView["invitations"][number]>(i)),
     rsvps: (h.rsvps as Row[]).map((x) => camelize<GuestView["rsvps"][number]>(x)),
   } : null;
+  const wedding = weddingFromRow(r.wedding as Row) as PublicWedding;
+  // guest_site() returns designs only for events this visitor may see; uploaded artwork is signed per request.
+  const designs = await Promise.all(((r.designs as Row[] | undefined) ?? []).map(async (x) => {
+    const { image_path, ...rest } = x;
+    const d = camelize<Omit<PublicDesign, "imageUrl">>(rest);
+    return { ...d, imageUrl: d.template === "custom" ? await artUrl(wedding.id, image_path as string | null) : null };
+  }));
   return {
-    wedding: weddingFromRow(r.wedding as Row) as PublicWedding,
-    events, guest,
+    wedding, events, designs, guest,
     locked: !!r.locked, isOrganizer: !!r.is_organizer, showBranding: !!r.show_branding,
   };
 });

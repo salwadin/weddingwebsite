@@ -30,7 +30,7 @@ jobs:
 
       # Applies supabase/migrations. Services the app and tests don't use are skipped.
       - name: Start local Supabase
-        run: supabase start -x studio,postgres-meta,edge-runtime,logflare,vector,imgproxy,realtime,storage-api,supavisor
+        run: supabase start -x studio,postgres-meta,edge-runtime,logflare,vector,imgproxy,realtime,supavisor
 
       # NEXT_PUBLIC_* values are inlined at build time, so this comes before the build.
       # Stripe: no secret key (payments stay off); the billing tests sign their own

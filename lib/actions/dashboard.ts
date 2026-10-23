@@ -8,12 +8,13 @@ import { deliverNow } from "../email/deliver";
 import { canEditEvent, canTouchHousehold, type Area } from "../access";
 import { assertFeature, requireOrg, type Org } from "../dashboard";
 import { hasFeature, PLANS } from "../plans";
+import { uploadArt } from "../invitation-art";
 import { normalizePhone, smsText } from "../sms/rules";
 import { DEMO_WEDDING_ID } from "../seed";
 import { loadDemoSeed } from "../seed-load";
 import { demoEnabled } from "../supabase/env";
 import { adminClient } from "../supabase/server";
-import type { EventType, Expense, Guest, Role, RsvpMode, Side, Task, ThemeSettings, Vendor, Visibility, WeddingEvent } from "../types";
+import type { EventType, Expense, Guest, InvitationDesign, Role, RsvpMode, Side, Task, ThemeSettings, Vendor, Visibility, WeddingEvent } from "../types";
 import type { FormState } from "./site";
 
 const str = (f: FormData, k: string, max = 500) => String(f.get(k) ?? "").trim().slice(0, max);
@@ -371,13 +372,27 @@ export async function saveDesign(form: FormData) {
   assertFeature(o, "invitation_designer");
   const eventId = str(form, "eventId");
   if (!o.events.some((e) => e.id === eventId)) throw new Error("Not permitted");
+  const back = (q: string) => redirect(`/dashboard/invitations?event=${eventId}&${q}`);
+  const t = str(form, "template");
+  const template = (["arch", "jali", "minimal", "custom"].includes(t) ? t : "arch") as InvitationDesign["template"];
+  // The couple's own artwork: stored privately, shown to guests through signed links (lib/invitation-art.ts).
+  const file = form.get("art");
+  let imagePath: string | undefined;
+  if (file instanceof File && file.size > 0) {
+    const up = await uploadArt(o.ctx.wedding.id, eventId, file);
+    if ("error" in up) back(`artError=${encodeURIComponent(up.error)}`);
+    else imagePath = up.path;
+  }
+  const existing = o.d.designs.find((x) => x.eventId === eventId && x.weddingId === o.ctx.wedding.id);
+  if (template === "custom" && !imagePath && !existing?.imagePath) back(`artError=${encodeURIComponent("Upload your design image to use your own design.")}`);
   await mutate(o, (d) => {
     let des = d.designs.find((x) => x.eventId === eventId && x.weddingId === o.ctx.wedding.id);
     if (!des) { des = { id: uid("des"), weddingId: o.ctx.wedding.id, eventId, template: "arch", englishText: "", urduText: "", arabicText: "", showQr: true }; d.designs.push(des); }
     Object.assign(des, {
-      template: (str(form, "template") || "arch") as "arch" | "jali" | "minimal",
+      template,
       englishText: str(form, "englishText", 600), urduText: str(form, "urduText", 300), arabicText: str(form, "arabicText", 300),
       showQr: bool(form, "showQr"),
+      ...(imagePath ? { imagePath } : {}),
     });
     audit(d, o.ctx.wedding.id, o.ctx.user.name, "design_update", d.events.find((e) => e.id === eventId)?.name ?? "");
   });

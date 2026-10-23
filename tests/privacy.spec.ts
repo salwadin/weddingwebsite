@@ -37,7 +37,7 @@ test.describe("wedding website visibility", () => {
   for (const [mode, household, allowed] of guests) {
     test(`the "${mode}" demo guest sees exactly their own events`, async ({ page }) => {
       await page.goto(`/demo/${mode}`); // follows the household's real /i/<token> link
-      await expect(page).toHaveURL(new RegExp(`/w/${SLUG}$`));
+      await expect(page).toHaveURL(new RegExp(`/w/${SLUG}/invitation$`)); // the link opens their invitation
       await expect(page.getByText(household).first()).toBeVisible();
       await expectOnly(page, allowed);
     });
@@ -64,7 +64,7 @@ test.describe("wedding website visibility", () => {
   test("a revoked invitation link falls back to the public view", async ({ page }) => {
     const link = await issueLink(DEMO_HOUSEHOLDS.nikkahShaadi);
     await page.goto(`/i/${link.token}`);
-    await expect(page).toHaveURL(new RegExp(`/w/${SLUG}$`));
+    await expect(page).toHaveURL(new RegExp(`/w/${SLUG}/invitation$`));
     await expectOnly(page, ["nikkah", "shaadi"]);
 
     await revokeLink(link.id);
