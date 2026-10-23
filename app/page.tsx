@@ -168,7 +168,10 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="px-6 py-10 text-center text-xs text-muted"><Logo className="text-lg" /><p className="mt-2">One Wedding. Every Celebration.</p></footer>
+      <footer className="px-6 py-10 text-center text-xs text-muted">
+        <Logo className="text-lg" /><p className="mt-2">One Wedding. Every Celebration.</p>
+        <p className="mt-3 space-x-3"><Link href="/privacy" className="hover:text-ink">Privacy</Link><Link href="/terms" className="hover:text-ink">Terms</Link><Link href="/sms" className="hover:text-ink">Text messages</Link></p>
+      </footer>
     </div>
   );
 }

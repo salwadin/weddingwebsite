@@ -16,6 +16,7 @@ export default function SignupPage() {
           <AuthForm action={signup} mode="signup" />
         </Card>
         <p className="mt-5 text-center text-sm text-muted">Already have an account? <Link href="/login" className="text-ink underline">Sign in</Link></p>
+        <p className="mt-3 text-center text-xs text-muted">By creating an account you agree to our <Link href="/terms" className="underline">Terms</Link> and <Link href="/privacy" className="underline">Privacy policy</Link>.</p>
       </div>
     </div>
   );
