@@ -24,5 +24,5 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Only paths that can carry an organizer or vendor session.
-  matcher: ["/dashboard/:path*", "/onboarding", "/vendor", "/marketplace/:path*", "/w/:path*", "/login", "/reset-password"],
+  matcher: ["/dashboard/:path*", "/onboarding", "/account/:path*", "/vendor", "/marketplace/:path*", "/w/:path*", "/login", "/reset-password"],
 };

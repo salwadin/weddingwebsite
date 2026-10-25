@@ -23,7 +23,7 @@ const ITEMS: { key: NavKey; area: Area; label: string; href: string }[] = [
   { key: "checklist", area: "checklist", label: "Planning Checklist", href: "/dashboard/checklist" },
   { key: "budget", area: "budget", label: "Budget", href: "/dashboard/budget" },
   { key: "vendors", area: "vendors", label: "Vendors", href: "/dashboard/vendors" },
-  { key: "settings", area: "settings", label: "Settings", href: "/dashboard/settings" },
+  { key: "settings", area: "dashboard", label: "Settings", href: "/dashboard/settings" },
   { key: "billing", area: "billing", label: "Plan & Billing", href: "/dashboard/billing" },
 ];
 

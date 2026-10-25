@@ -4,7 +4,7 @@ export const metadata = { title: "Privacy policy", description: "What Qubool col
 
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy policy" updated="October 23, 2026"
+    <LegalPage title="Privacy policy" updated="October 25, 2026"
       intro={<p>Qubool helps couples plan multi-event weddings and invite their guests. This policy explains what information we handle, why, and the choices you have. We don&apos;t sell personal information, and we don&apos;t use it for advertising.</p>}>
       <Section title="Information we collect">
         <ul>
@@ -48,13 +48,21 @@ export default function Privacy() {
       </Section>
 
       <Section title="How long we keep it">
-        <p>We keep wedding data while the account is active. When a couple asks us to delete their wedding or account, we delete its data, including the guest list, from our live systems; backups expire on a rolling schedule. Payment records are kept as long as tax and accounting rules require.</p>
+        <p>We keep wedding data while the account is active. When you delete your account, or ask us to, we delete it from our live systems straight away; backups expire on a rolling schedule. Payment records are kept as long as tax and accounting rules require.</p>
+        <p>Deleting your account removes:</p>
+        <ul>
+          <li>Your name, email address and sign-in.</li>
+          <li>Any wedding you are the only administrator of, for everyone who plans it: its website, events, guest list, RSVPs, budget, checklist, uploaded photos and invitation artwork.</li>
+          <li>Your place on any wedding that has another administrator. That wedding carries on without you.</li>
+          <li>Your vendor listing and the inquiries sent to it. Any promotion subscription is cancelled immediately, with no further charges.</li>
+        </ul>
+        <p>Inquiries you sent to vendors stay with those vendors, and program applications (Founding Vendor and Beta) stay with our records unless you ask us to remove them.</p>
       </Section>
 
       <Section title="Your choices">
         <ul>
           <li>You can view and correct your information in your dashboard, and export your guest list as a spreadsheet.</li>
-          <li>You can ask us to delete your account and data at any time.</li>
+          <li>You can delete your account at any time under Settings → Delete account (vendors: at the bottom of the vendor portal), or ask us to do it for you.</li>
           <li>Guests who want their information removed can ask the couple, or contact us directly.</li>
           <li>Reply STOP to any Qubool text to stop texts.</li>
         </ul>

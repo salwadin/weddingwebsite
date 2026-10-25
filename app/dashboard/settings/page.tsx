@@ -6,6 +6,7 @@ import { DEMO_WEDDING_ID } from "@/lib/seed";
 import { demoEnabled } from "@/lib/supabase/env";
 import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { ConfirmButton } from "@/components/dash/nav";
+import { DeleteAccountCard } from "@/components/delete-account-card";
 
 const ROLE_HELP: Record<Role, string> = {
   admin: "Everything, including settings, Mahr, and collaborators.",
@@ -18,9 +19,18 @@ const ROLE_HELP: Record<Role, string> = {
 };
 
 export default async function SettingsPage() {
-  const o = await requireOrg("settings");
+  // Everyone can reach their own account here; the wedding's settings are for administrators.
+  const o = await requireOrg("dashboard");
   const { d, ctx, events } = o;
   const w = ctx.wedding;
+  if (!can(o.scope, "settings")) {
+    return (
+      <>
+        <PageHeader title="Settings" description="Your Qubool account." />
+        <div className="max-w-2xl"><DeleteAccountCard user={ctx.user} /></div>
+      </>
+    );
+  }
   const collabs = d.collaborators.filter((c) => c.weddingId === w.id);
   return (
     <>
@@ -104,6 +114,7 @@ export default async function SettingsPage() {
               </form>
             </Card>
           )}
+          <DeleteAccountCard user={ctx.user} />
         </div>
       </div>
     </>

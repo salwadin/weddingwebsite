@@ -16,7 +16,7 @@ export default async function Onboarding() {
     <div className="jali-bg min-h-screen px-5 pb-20 pt-8">
       <div className="mx-auto mb-10 flex max-w-3xl items-center justify-between">
         <Link href="/"><Logo /></Link>
-        <span className="text-xs text-muted">About 3 minutes</span>
+        <span className="text-xs text-muted">About 3 minutes · <Link href="/account/delete" className="underline hover:text-ink">Delete account</Link></span>
       </div>
       <OnboardingWizard action={createWedding} userName={user.name} />
     </div>
