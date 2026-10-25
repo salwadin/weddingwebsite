@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Check, Image as ImageIcon, Mail, MessageSquare, PiggyBank, Users } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Eye, Link2, Lock, Image as ImageIcon, Mail, MessageSquare, PiggyBank, Users } from "lucide-react";
 import { ButtonLink, Logo } from "@/components/ui";
 import { demoEnabled } from "@/lib/supabase/env";
 import { SiteHeader } from "@/components/site-header";
+import { GuestInvitations } from "@/components/landing/guest-invitations";
 import { SITE_PHOTOS } from "@/lib/photos";
 import { PLANS, PLAN_ORDER } from "@/lib/plans";
 
 const FEATURES = [
-  { icon: Mail, title: "Personal invitations", body: "Every household gets its own link and sees only the events they're invited to." },
+  { icon: Mail, title: "A tidy guest list", body: "Households, plus-ones and children, by family and side. Import yours in one go." },
   { icon: CalendarDays, title: "Every event, one plan", body: "Each celebration has its own guest list, details and RSVPs, all in one place." },
   { icon: Users, title: "Planned together", body: "Invite family or a planner, each with exactly the access they need." },
   { icon: MessageSquare, title: "RSVPs, handled", body: "Replies and meal choices come in on their own, with gentle reminders by email or text." },
@@ -40,7 +41,7 @@ function HeroPreview() {
       {/* A guest's personal invitation */}
       <div className={`absolute left-[12%] right-[10%] top-[9%] rounded-2xl bg-white p-6 sm:p-7 ${shadow}`}>
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted">You&apos;re invited</p>
-        <p className="mt-3 text-sm text-muted">Dear the Chens,</p>
+        <p className="mt-3 text-sm text-muted">Dear Chen family,</p>
         <p className="mt-1 font-serif text-[2rem] leading-none tracking-tight sm:text-4xl">Jordan &amp; Priya</p>
         <ul className="mt-5 space-y-2.5 text-sm">
           {[["Welcome dinner", "Fri, June 11"], ["Ceremony", "Sat, June 12"], ["Reception", "Sat, June 12"]].map(([e, d]) => (
@@ -81,7 +82,7 @@ export default function Landing() {
               One Wedding.<br /><span className="italic text-gold">Every Celebration.</span>
             </h1>
             <p className="mt-5 max-w-md text-lg leading-relaxed text-ink/75">
-              Your website, your guest list and every event, from the welcome dinner to the last dance, in one calm place.
+              Every guest gets their own invitation, showing only the events they&apos;re invited to. Plus your website, guest list and RSVPs, all in one calm place.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
               <ButtonLink href="/beta" size="lg">Request early access <ArrowRight className="h-4 w-4" /></ButtonLink>
@@ -95,6 +96,35 @@ export default function Landing() {
           </div>
 
           <HeroPreview />
+        </section>
+
+        <section className="border-t border-line">
+          <div className="mx-auto grid max-w-6xl items-start gap-10 px-6 py-16 sm:py-20 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
+            <div className="lg:sticky lg:top-8">
+              <p className="text-sm font-medium text-gold">What makes Qubool different</p>
+              <h2 className="mt-3 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">A different invitation for every guest</h2>
+              <p className="mt-4 text-lg leading-relaxed text-ink/75">
+                Most wedding websites show everyone everything. With Qubool, each household gets its own invitation, listing only the events you&apos;ve invited them to. Try it: pick a guest.
+              </p>
+              <ul className="mt-7 space-y-4">
+                {[
+                  [Link2, "Every household gets its own link", "Send it by email or text. No passwords, no accounts."],
+                  [Eye, "They see only their events", "The Chens see the family brunch. Your colleagues never know it exists."],
+                  [Lock, "Private events stay private", "Not hidden with a trick: the page simply never includes them."],
+                  [Users, "One RSVP for the whole household", "Each person, each event, meal choices included."],
+                ].map(([Icon, t, b]) => {
+                  const I = Icon as typeof Eye;
+                  return (
+                    <li key={t as string} className="flex gap-3.5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cream"><I className="h-4 w-4 text-gold" strokeWidth={1.8} /></span>
+                      <div><p className="font-medium">{t as string}</p><p className="mt-0.5 text-[15px] leading-relaxed text-ink/70">{b as string}</p></div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+            <GuestInvitations />
+          </div>
         </section>
 
         <section className="bg-white">
