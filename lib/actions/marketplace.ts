@@ -14,6 +14,7 @@ import { checkoutExpiry, paymentsEnabled, stripe, tierItemPrice, tierLineItem, C
 import { adminClient, anonClient, serverClient } from "../supabase/server";
 import type { Inquiry, Listing, ListingTier } from "../types";
 import type { FormState } from "./site";
+import { inNativeApp } from "@/lib/native";
 
 const str = (f: FormData, k: string, max = 300) => String(f.get(k) ?? "").trim().slice(0, max);
 const isEmail = (s: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
@@ -129,7 +130,7 @@ export async function setInquiryStatus(status: Inquiry["status"], form: FormData
 export async function changeListingTier(form: FormData) {
   const { user, sb, l } = await myListing();
   const tier = str(form, "tier") as ListingTier;
-  if (!["basic", "featured", "spotlight"].includes(tier)) return;
+  if (!["basic", "featured", "spotlight"].includes(tier) || await inNativeApp()) return;
   if (isDemoEmail(user.email)) {
     const { error } = await adminClient().from("listings").update({ tier }).eq("id", l.id);
     if (error) throw new Error(error.message);

@@ -6,6 +6,7 @@ import { DEMO_WEDDING_ID } from "@/lib/seed";
 import { demoEnabled } from "@/lib/supabase/env";
 import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { ConfirmButton } from "@/components/dash/nav";
+import { inNativeApp } from "@/lib/native";
 
 const ROLE_HELP: Record<Role, string> = {
   admin: "Everything, including settings, Mahr, and collaborators.",
@@ -19,6 +20,7 @@ const ROLE_HELP: Record<Role, string> = {
 
 export default async function SettingsPage() {
   const o = await requireOrg("settings");
+  const app = await inNativeApp();
   const { d, ctx, events } = o;
   const w = ctx.wedding;
   const collabs = d.collaborators.filter((c) => c.weddingId === w.id);
@@ -67,7 +69,7 @@ export default async function SettingsPage() {
             </ul>
           )}
           {!allows(o, "collaborators") ? (
-            <p className="border-t border-line p-5 text-sm text-muted">Inviting family collaborators is part of Plus. <a href="/dashboard/billing" className="text-ink underline">See plans</a></p>
+            <p className="border-t border-line p-5 text-sm text-muted">Inviting family collaborators is part of Plus.{!app && <> <a href="/dashboard/billing" className="text-ink underline">See plans</a></>}</p>
           ) : <form action={inviteCollaborator} className="grid gap-3 border-t border-line p-5 md:grid-cols-2">
             <Field label="Name"><Input name="name" placeholder="Bilal Siddiqui" /></Field>
             <Field label="Email"><Input name="email" type="email" required /></Field>

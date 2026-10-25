@@ -9,6 +9,7 @@ import { adminClient } from "@/lib/supabase/server";
 import type { Plan } from "@/lib/types";
 import { Badge, Button, Card, CardHeader, Input, PageHeader, Progress } from "@/components/ui";
 import { PlanCards } from "@/components/plan-cards";
+import { inNativeApp } from "@/lib/native";
 
 const money = (cents: number, currency = "usd") => (cents / 100).toLocaleString("en-US", { style: "currency", currency, maximumFractionDigits: cents % 100 ? 2 : 0 });
 
@@ -31,6 +32,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const events = o.d.events.filter((e) => e.weddingId === w.id).length;
   const hh = new Set(o.d.households.filter((h) => h.weddingId === w.id).map((h) => h.id));
   const guests = o.d.guests.filter((g) => hh.has(g.householdId)).length;
+  const app = await inNativeApp();
   const meter = (used: number, max: number) => (max === Infinity ? 5 : (used / max) * 100);
 
   return (
@@ -80,6 +82,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         </Card>
       </div>
 
+      {app ? <p className="rounded-xl bg-cream px-4 py-3 text-sm text-muted">Plan changes aren&apos;t available in the app.</p> : <>
       <PlanCards current={w.plan} action={(p) => {
         const up = PLAN_ORDER.indexOf(p) > PLAN_ORDER.indexOf(w.plan);
         if (w.plan === p) return <Button className="w-full" variant="secondary" disabled>Current plan</Button>;
@@ -95,6 +98,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       {demo && <p className="mt-4 text-center text-xs text-muted">Demo: plan changes apply instantly and nothing is charged.</p>}
       {live && <p className="mt-4 text-center text-xs text-muted">One-time payment, securely processed by Stripe. Upgrading from Plus to Signature costs the difference.</p>}
       {!demo && !live && <p className="mt-4 text-center text-xs text-muted">Online payments aren&apos;t available yet. Please check back soon.</p>}
+      </>}
 
       {paid.length > 0 && (
         <Card className="mt-8">

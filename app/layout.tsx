@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Amiri, Cormorant_Garamond, Geist, Instrument_Serif, Marcellus, Noto_Nastaliq_Urdu, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import { NativeBridge } from "@/components/native-bridge";
 
 const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500", "600"], style: ["normal", "italic"], variable: "--font-cormorant" });
 // Qubool's own brand: a modern editorial serif for headings, a clean sans for everything else.
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={[cormorant.variable, instrument.variable, geist.variable, amiri.variable, nastaliq.variable, playfair.variable, marcellus.variable].join(" ")}>
-      <body>{children}</body>
+      <body>{children}<NativeBridge /></body>
     </html>
   );
 }

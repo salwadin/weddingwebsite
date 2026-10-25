@@ -6,6 +6,7 @@ import { discrepancies, eventStats, requireOrg } from "@/lib/dashboard";
 import { PLANS, trialDaysLeft } from "@/lib/plans";
 import { longDate, money, time12, VISIBILITY } from "@/lib/format";
 import { Badge, ButtonLink, Card, CardHeader, PageHeader, Progress, Stat } from "@/components/ui";
+import { inNativeApp } from "@/lib/native";
 
 export default async function Overview({ searchParams }: { searchParams: Promise<{ denied?: string; welcome?: string }> }) {
   const { denied, welcome } = await searchParams;
@@ -24,12 +25,13 @@ export default async function Overview({ searchParams }: { searchParams: Promise
   const guestsTotal = d.guests.filter((g) => households.some((h) => h.id === g.householdId)).length;
   const activity = d.audit.filter((a) => a.weddingId === w.id).slice(0, 8);
 
+  const app = await inNativeApp();
   return (
     <>
       {trialDaysLeft(w) > 0 && can(scope, "billing") && (
         <p className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-gold-soft/50 px-4 py-2.5 text-sm">
           <span>You&apos;re trying every feature free for {trialDaysLeft(w)} more days. After that you&apos;ll be on {PLANS[w.plan].name}.</span>
-          <Link href="/dashboard/billing" className="font-medium underline">Compare plans</Link>
+          {!app && <Link href="/dashboard/billing" className="font-medium underline">Compare plans</Link>}
         </p>
       )}
       {welcome && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-3 text-sm text-[#3f5238]">Mubarak! Your wedding is set up. Next: add details to each event, then send personal invitation links from the Guest List.</p>}
