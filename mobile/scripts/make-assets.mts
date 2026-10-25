@@ -24,9 +24,9 @@ const png = (svg: Buffer, name: string) => sharp(svg).png().toFile(out + name);
 
 await Promise.all([
   // iOS icon and the Android legacy icon: ivory and gold rings on ink, like the favicon.
-  png(rings(1024, 760, IVORY, INK), "icon-only.png"),
+  png(rings(1024, 1000, IVORY, INK), "icon-only.png"),
   // Android adaptive icon: launchers crop to the middle ~66%, so the rings sit well inside it.
-  png(rings(1024, 560, IVORY), "icon-foreground.png"),
+  png(rings(1024, 900, IVORY), "icon-foreground.png"),
   sharp({ create: { width: 1024, height: 1024, channels: 4, background: INK } }).png().toFile(out + "icon-background.png"),
   // Splash: the mark small and calm on the site's ivory (ink in dark mode).
   png(rings(2732, 520, INK, IVORY), "splash.png"),
