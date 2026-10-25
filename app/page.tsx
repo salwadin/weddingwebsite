@@ -3,7 +3,7 @@ import { ArrowRight, CalendarDays, Check, Eye, Link2, Lock, Image as ImageIcon, 
 import { ButtonLink, Logo } from "@/components/ui";
 import { demoEnabled } from "@/lib/supabase/env";
 import { SiteHeader } from "@/components/site-header";
-import { GuestInvitations } from "@/components/landing/guest-invitations";
+import { TwoViews } from "@/components/landing/two-views";
 import { SITE_PHOTOS } from "@/lib/photos";
 import { PLANS, PLAN_ORDER } from "@/lib/plans";
 
@@ -99,14 +99,16 @@ export default function Landing() {
         </section>
 
         <section className="border-t border-line">
-          <div className="mx-auto grid max-w-6xl items-start gap-10 px-6 py-16 sm:py-20 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
-            <div className="lg:sticky lg:top-8">
-              <p className="text-sm font-medium text-gold">What makes Qubool different</p>
-              <h2 className="mt-3 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">A different invitation for every guest</h2>
-              <p className="mt-4 text-lg leading-relaxed text-ink/75">
-                Most wedding websites show everyone everything. With Qubool, each household gets its own invitation, listing only the events you&apos;ve invited them to. Try it: pick a guest.
-              </p>
-              <ul className="mt-7 space-y-4">
+          <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+            <div className="grid gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-16">
+              <div>
+                <p className="text-sm font-medium text-gold">What makes Qubool different</p>
+                <h2 className="mt-3 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">A different invitation for every guest</h2>
+                <p className="mt-4 text-lg leading-relaxed text-ink/75">
+                  Most wedding websites show everyone everything. With Qubool, each household gets its own invitation, listing only the events you&apos;ve invited them to. Try it below: tick a box in your guest list, then see what that guest sees.
+                </p>
+              </div>
+              <ul className="grid gap-x-8 gap-y-6 self-end sm:grid-cols-2">
                 {[
                   [Link2, "Every household gets its own link", "Send it by email or text. No passwords, no accounts."],
                   [Eye, "They see only their events", "The Chens see the family brunch. Your colleagues never know it exists."],
@@ -123,7 +125,7 @@ export default function Landing() {
                 })}
               </ul>
             </div>
-            <GuestInvitations />
+            <div className="mt-10 min-w-0"><TwoViews /></div>
           </div>
         </section>
 
