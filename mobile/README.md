@@ -15,6 +15,10 @@ What the apps add on top of the website:
 - **Share sheet**: in the app, "Copy" buttons for invitation and website links become
   "Share" and open the phone's share sheet (Messages, WhatsApp, Mail…).
 - **Photo picker and camera** for every photo upload.
+- **Push notifications**: couples hear the moment a household RSVPs, and vendors when a
+  couple sends an inquiry. Tapping one opens that household or the inquiries. The app
+  offers them with its own card on the dashboard first ("Turn on notifications"), so the
+  system prompt only appears when someone wants it. Set up in step 5 below.
 - **Offline screen** when there's no connection.
 - **No purchases inside the apps.** Apple and Google only allow digital purchases through
   their own in-app payments. The apps hide plan and listing upgrades, and the site
@@ -95,14 +99,65 @@ These are the steps only you can do. Each one is listed in order.
    your testers' emails → roll out. After the 14 days, apply for production.
 6. Do step 2.2 (the SHA-256 fingerprint) once Play has your first upload.
 
-### 5. Before the first submission, also check
+### 5. Push notifications
+
+Do this before the first store builds: the Android file in step B goes *into* the app.
+Until the keys are in Vercel, nothing is sent and nothing breaks.
+
+**A. iPhone (Apple Push Notification service)**
+
+1. Go to https://developer.apple.com/account → **Certificates, IDs & Profiles** →
+   **Keys** → the blue **+**.
+2. **Key Name**: `Qubool push`. Tick **Apple Push Notifications service (APNs)**, click
+   **Configure** next to it, choose **Sandbox & Production**, then **Save**.
+3. **Continue** → **Register** → **Download**. You can only download it once, so put the
+   `AuthKey_XXXXXXXXXX.p8` file in your password manager right away.
+4. Note the **Key ID** shown on that page (10 characters, also in the file name).
+5. In Xcode (`npm run mobile:ios`): **App** → **Signing & Capabilities**. Check that
+   **Push Notifications** is listed. If it isn't, click **+ Capability** → **Push
+   Notifications**. With automatic signing, Xcode switches push on for `app.qubool`.
+
+**B. Android (Firebase Cloud Messaging)**
+
+1. Go to https://console.firebase.google.com → **Create a project** → name it `Qubool` →
+   **Continue** → turn **Google Analytics** off → **Create project**.
+2. On the project page click the **Android** icon (**Add app**). **Android package name**:
+   `app.qubool`, nickname `Qubool` → **Register app**.
+3. **Download google-services.json** and save it as
+   `mobile/android/app/google-services.json` (next to `build.gradle`). Click **Next**
+   through the remaining steps; the app already has the SDK. Commit the file: it isn't a
+   secret, and every Android build needs it. Builds without it work but skip notifications.
+4. Back in Firebase: the gear icon → **Project settings** → **Cloud Messaging** tab. Check
+   that **Firebase Cloud Messaging API (V1)** says **Enabled**.
+5. **Service accounts** tab → **Generate new private key** → **Generate key**. A `.json`
+   file downloads. It *is* a secret: keep it in your password manager.
+
+**C. Tell the website**
+
+1. Vercel → qubool project → **Settings** → **Environment Variables** → add:
+   - `APNS_KEY` = the whole text of the `.p8` file (open it in TextEdit; include the
+     `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines)
+   - `APNS_KEY_ID` = the Key ID from A.4
+   - `FCM_SERVICE_ACCOUNT` = the whole text of the service-account `.json` from B.5
+
+   The team id comes from `APPLE_TEAM_ID` (step 2).
+2. Redeploy, then delete the downloaded key files from your Downloads folder.
+
+**D. Try it**
+
+1. Run the app on your own phone from Xcode or Android Studio (a phone plugged in, chosen
+   at the top of the window, then ▶). Sign in as a couple.
+2. On the dashboard tap **Turn on notifications** → **Allow**.
+3. In a browser, open one of your households' invitation links and send an RSVP. The
+   phone shows "<household> RSVP'd" within a few seconds; tapping it opens that household.
+
+### 6. Before the first submission, also check
 
 - **Account deletion (Apple rule 5.1.1(v))**: apps that let people sign up must let them
   delete their account *inside the app*. Qubool doesn't have a "Delete my account"
   button yet. Add one before submitting to Apple, or the review will be rejected.
-- **Push notifications** aren't wired up yet. They're a common ask from Apple reviewers
-  for apps like this (rule 4.2, "minimum functionality") and would be the next native
-  feature to add.
+- **Review notes**: mention that couples get a notification when a guest RSVPs, and
+  vendors when they receive an inquiry (rule 4.2, "minimum functionality").
 
 ## Developer notes
 
@@ -116,5 +171,15 @@ These are the steps only you can do. Each one is listed in order.
   `components/native-bridge.tsx` runs the native side (deep links, splash, share).
 - Universal-link files: `app/.well-known/apple-app-site-association/route.ts` and
   `app/.well-known/assetlinks.json/route.ts`.
+- Push: `components/push-prompt.tsx` asks, `components/native-bridge.tsx` registers and
+  opens tapped notifications, tokens live in `device_tokens`, and `lib/push` sends (APNs
+  over HTTP/2 with the .p8 key, FCM HTTP v1). Builds run from Xcode get sandbox tokens and
+  App Store / TestFlight builds production ones; the server tries production first, then
+  the sandbox. Signing out forgets the phone. The demo wedding never sends notifications.
+- Try a notification in the Simulator without any keys:
+  `xcrun simctl push booted app.qubool mobile/push-test.apns`. Tapping it opens the page
+  in its `url`.
+- Android builds without `google-services.json` leave the push plugin out
+  (`MainActivity.java`), because it would crash the app without Firebase.
 - Bump the version for each store upload: Xcode → App → General → Version / Build, and
   `versionCode` / `versionName` in `mobile/android/app/build.gradle`.
