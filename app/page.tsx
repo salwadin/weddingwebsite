@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Image as ImageIcon, Mail, MessageSquare, PiggyBank, Users } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Image as ImageIcon, Mail, MessageSquare, PiggyBank, Users } from "lucide-react";
 import { ButtonLink, Logo } from "@/components/ui";
 import { demoEnabled } from "@/lib/supabase/env";
 import { SiteHeader } from "@/components/site-header";
@@ -27,6 +27,45 @@ const DEMO = [
   { mode: "vendor", label: "As a vendor", sub: "Listing and inquiries" },
 ];
 
+/**
+ * The hero's right side: a few cards from the product on a soft gradient, showing what
+ * Qubool does (a guest's own invitation, replies coming in) instead of a stock photo.
+ */
+function HeroPreview() {
+  const shadow = "shadow-[0_24px_60px_-28px_rgba(43,38,32,0.35)]";
+  return (
+    <div className="relative aspect-[3/5] w-full overflow-hidden rounded-[28px] bg-[#f6efe6] sm:aspect-[4/5]" aria-label="A preview of Qubool: a guest's invitation and RSVP replies" role="img">
+      <div aria-hidden className="absolute inset-0 bg-[radial-gradient(60%_50%_at_20%_15%,#f3dcd5_0%,transparent_70%),radial-gradient(55%_45%_at_85%_80%,#e3e8de_0%,transparent_70%),radial-gradient(45%_40%_at_80%_10%,#efe2c9_0%,transparent_70%)]" />
+
+      {/* A guest's personal invitation */}
+      <div className={`absolute left-[12%] right-[10%] top-[9%] rounded-2xl bg-white p-6 sm:p-7 ${shadow}`}>
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted">You&apos;re invited</p>
+        <p className="mt-3 text-sm text-muted">Dear the Chens,</p>
+        <p className="mt-1 font-serif text-[2rem] leading-none tracking-tight sm:text-4xl">Jordan &amp; Priya</p>
+        <ul className="mt-5 space-y-2.5 text-sm">
+          {[["Welcome dinner", "Fri, June 11"], ["Ceremony", "Sat, June 12"], ["Reception", "Sat, June 12"]].map(([e, d]) => (
+            <li key={e} className="flex items-center justify-between gap-3 border-t border-line/70 pt-2.5"><span>{e}</span><span className="text-xs text-muted">{d}</span></li>
+          ))}
+        </ul>
+        <span className="mt-5 inline-flex h-9 items-center rounded-full bg-ink px-5 text-xs font-medium text-ivory">RSVP</span>
+      </div>
+
+      {/* Replies coming in */}
+      <div className={`absolute bottom-[7%] left-[5%] w-[52%] rounded-2xl bg-white p-4 ${shadow}`}>
+        <p className="text-xs text-muted">Replies</p>
+        <p className="mt-1 font-serif text-3xl tracking-tight">128<span className="text-base text-muted"> of 160</span></p>
+        <div className="mt-2.5 h-1.5 rounded-full bg-cream"><div className="h-1.5 w-[80%] rounded-full bg-sage" /></div>
+      </div>
+
+      {/* A delivered note */}
+      <div className={`absolute bottom-[12%] right-[6%] flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-xs ${shadow}`}>
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sage text-white"><Check className="h-2.5 w-2.5" strokeWidth={3} /></span>
+        The Chens replied
+      </div>
+    </div>
+  );
+}
+
 export default function Landing() {
   return (
     <div className="min-h-screen">
@@ -49,19 +88,7 @@ export default function Landing() {
             <p className="mt-4 text-xs text-muted">Free to start. No card needed.</p>
           </div>
 
-          <div className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={SITE_PHOTOS.gardenCouple} alt="A newlywed couple outdoors" className="aspect-[4/5] w-full rounded-[28px] object-cover" />
-            <div className="absolute -bottom-6 left-4 w-64 rounded-2xl border border-line bg-white/95 p-4 text-sm shadow-[0_20px_50px_-25px_rgba(43,38,32,0.35)] backdrop-blur sm:-left-8">
-              <p className="text-xs text-muted">The Chens&apos; invitation</p>
-              <ul className="mt-2 space-y-1.5">
-                {[["Welcome dinner", "Fri"], ["Ceremony", "Sat"], ["Reception", "Sat"]].map(([e, s]) => (
-                  <li key={e} className="flex items-center justify-between"><span>{e}</span><span className="text-xs text-muted">{s}</span></li>
-                ))}
-              </ul>
-              <p className="mt-3 border-t border-line pt-2 text-xs text-muted">Every guest sees only their own events.</p>
-            </div>
-          </div>
+          <HeroPreview />
         </section>
 
         <section className="border-t border-line">
