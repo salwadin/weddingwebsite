@@ -10,7 +10,7 @@ import { DemoBar } from "@/components/demo-bar";
 import { isDemoWedding } from "@/lib/demo";
 
 const HEADING: Record<string, string> = {
-  cormorant: "var(--font-serif)", playfair: "var(--font-playfair)", marcellus: "var(--font-marcellus)",
+  cormorant: "var(--font-classic)", playfair: "var(--font-playfair)", marcellus: "var(--font-marcellus)",
 };
 
 // Metadata is derived from public fields only; private event names/dates never reach <head>.

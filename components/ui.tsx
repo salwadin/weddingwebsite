@@ -135,13 +135,20 @@ export function Checkbox({ className, ...p }: ComponentProps<"input">) {
 }
 
 /** Small decorative crescent-arch mark used as the Qubool logo. */
+/** Two interlocking rings: Qubool's mark (also the favicon, app/icon.svg). */
+export function LogoMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" fill="none" aria-hidden className={cn("h-6 w-6", className)}>
+      <circle cx="12.5" cy="16" r="7.5" stroke="currentColor" strokeWidth="2" />
+      <circle cx="19.5" cy="16" r="7.5" stroke="#b08d57" strokeWidth="2" />
+    </svg>
+  );
+}
+
 export function Logo({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-2 font-serif text-2xl tracking-wide", className)}>
-      <svg width="22" height="26" viewBox="0 0 22 26" fill="none" aria-hidden>
-        <path d="M1 25V11C1 5.5 5.5 1 11 1s10 4.5 10 10v14" stroke="currentColor" strokeWidth="1.4" />
-        <path d="M5 25V12c0-3.3 2.7-6 6-6s6 2.7 6 6v13" stroke="#b08d57" strokeWidth="1.2" />
-      </svg>
+    <span className={cn("inline-flex items-center gap-2 font-serif text-2xl tracking-tight", className)}>
+      <LogoMark />
       Qubool
     </span>
   );
