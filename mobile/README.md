@@ -11,6 +11,7 @@ What the apps add on top of the website:
   `mobile/scripts/make-assets.mts`; run `npm run mobile:assets` to redraw them.
 - **Invitation and email links open in the app** (universal links / app links) when the
   app is installed: `/i/<token>`, sign-up confirmation, password reset, wedding websites.
+  `qubool://i/<token>` opens the same pages without universal links (handy for testing).
 - **Share sheet**: in the app, "Copy" buttons for invitation and website links become
   "Share" and open the phone's share sheet (Messages, WhatsApp, Mail…).
 - **Photo picker and camera** for every photo upload.

@@ -27,6 +27,14 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="www.qubool.app" />
             </intent-filter>
+
+            <!-- qubool://i/<token>: the same pages, for links where app links can't be used. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="qubool" />
+            </intent-filter>
         </activity>
 
         <provider

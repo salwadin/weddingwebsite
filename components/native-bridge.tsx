@@ -34,8 +34,10 @@ export function NativeBridge() {
       await SplashScreen.hide({ fadeOutDuration: 200 });
       // A qubool.app link tapped elsewhere (an invitation, a sign-in email) opened the app:
       // show that page here. Same path on this origin, so local test builds stay local.
+      // qubool://i/<token> works too (Info.plist / AndroidManifest.xml), without universal links.
       const handle = await App.addListener("appUrlOpen", ({ url }) => {
         const to = new URL(url);
+        if (to.protocol === "qubool:") return window.location.assign(`/${to.hostname}${to.pathname}${to.search}${to.hash}`);
         if (!/(^|\.)qubool\.app$/.test(to.hostname)) return;
         window.location.assign(to.pathname + to.search + to.hash);
       });
