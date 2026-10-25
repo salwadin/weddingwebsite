@@ -7,12 +7,13 @@ export const metadata = { title: "Create your account" };
 
 export default function SignupPage() {
   return (
-    <div className="jali-bg flex min-h-screen items-center justify-center px-5 py-12">
+    <div className="flex min-h-screen items-center justify-center px-5 py-12">
       <div className="w-full max-w-sm">
         <Link href="/" className="mb-8 flex justify-center"><Logo /></Link>
         <Card className="p-7">
-          <h1 className="font-serif text-3xl">Mubarak!</h1>
-          <p className="mb-6 mt-1 text-sm text-muted">Create an account and we&apos;ll set up your wedding in a few minutes.</p>
+          <h1 className="font-serif text-3xl">Welcome to the beta</h1>
+          <p className="mt-1 text-sm text-muted">Create your account with the email you applied with, and we&apos;ll set up your wedding in a few minutes.</p>
+          <p className="mb-6 mt-3 rounded-xl bg-cream/70 px-3 py-2 text-xs text-ink/80">Qubool is invite-only for now. Not invited yet? <Link href="/beta" className="underline">Request early access</Link>.</p>
           <AuthForm action={signup} mode="signup" />
         </Card>
         <p className="mt-5 text-center text-sm text-muted">Already have an account? <Link href="/login" className="text-ink underline">Sign in</Link></p>

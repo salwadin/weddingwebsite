@@ -14,6 +14,7 @@ import { checkoutExpiry, paymentsEnabled, stripe, tierItemPrice, tierLineItem, C
 import { adminClient, anonClient, serverClient } from "../supabase/server";
 import type { Inquiry, Listing, ListingTier } from "../types";
 import type { FormState } from "./site";
+import { mayJoin, VENDORS_INVITE_ONLY } from "../programs";
 
 const str = (f: FormData, k: string, max = 300) => String(f.get(k) ?? "").trim().slice(0, max);
 const isEmail = (s: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
@@ -65,6 +66,7 @@ export async function vendorSignup(_prev: FormState, form: FormData): Promise<Fo
   if (business.length < 2 || name.length < 2) return { error: "Please add your name and business name." };
   if (!isEmail(email)) return { error: "Please enter a valid email." };
   if (password.length < 8) return { error: "Please choose a password with at least 8 characters." };
+  if (!(await mayJoin(email, "vendor"))) return { error: VENDORS_INVITE_ONLY };
   const sb = await serverClient();
   const { data, error } = await sb.auth.signUp({
     email, password,

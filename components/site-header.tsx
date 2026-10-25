@@ -10,9 +10,8 @@ export function SiteHeader() {
         <Link href="/marketplace" className="hidden rounded-full px-3 py-2 text-sm text-ink/75 hover:bg-cream lg:block">Vendors</Link>
         <Link href="/pricing" className="hidden rounded-full px-3 py-2 text-sm text-ink/75 hover:bg-cream sm:block">Pricing</Link>
         <Link href="/founding-vendors" className="hidden rounded-full px-3 py-2 text-sm text-ink/75 hover:bg-cream md:block">For vendors</Link>
-        <Link href="/beta" className="hidden rounded-full px-3 py-2 text-sm text-ink/75 hover:bg-cream sm:block">Join the beta</Link>
         <ButtonLink href="/login" variant="ghost" size="sm">Sign in</ButtonLink>
-        <ButtonLink href="/signup" size="sm">Start free</ButtonLink>
+        <ButtonLink href="/beta" size="sm">Request access</ButtonLink>
       </nav>
     </header>
   );

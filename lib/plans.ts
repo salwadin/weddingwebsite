@@ -19,13 +19,13 @@ export const PLANS: Record<Plan, {
     highlights: ["Wedding website with private events", "Up to 2 events", "Up to 150 guests", "Household RSVPs", "Checklist & budget", "Browse & message vendors"],
   },
   plus: {
-    name: "Plus", price: 149, billing: "one-time, per wedding",
+    name: "Plus", price: 80, billing: "one-time, per wedding",
     tagline: "For multi-day weddings with big families.",
     maxEvents: 8, maxGuests: 1000,
     highlights: ["Everything in Essentials", "Up to 8 events and 1,000 guests", "Invitation designer with QR codes", "Family collaborators & roles", "Outfit manager", "CSV import", "Text invitations & reminders (500 a month)"],
   },
   signature: {
-    name: "Signature", price: 349, billing: "one-time, per wedding",
+    name: "Signature", price: 150, billing: "one-time, per wedding",
     tagline: "The full planning studio, for every layer of the celebration.",
     maxEvents: Infinity, maxGuests: Infinity,
     highlights: ["Everything in Plus", "Unlimited events and guests", "Design studio: moodboards & floor plans", "Your own domain name", "No Qubool branding on your site", "2,000 texts a month", "Priority support"],

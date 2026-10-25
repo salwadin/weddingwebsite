@@ -39,7 +39,7 @@ const subscription = (id: string, status: string, tier = "featured", amount = 10
 
 test("a paid plan checkout upgrades the wedding exactly once", async ({ request }) => {
   await admin.from("weddings").update({ plan: "free", trial_ends_at: new Date(Date.now() + 5 * 86400e3).toISOString() }).eq("id", DEMO_WEDDING_ID);
-  const s = planSession("plus", 14900);
+  const s = planSession("plus", 8000);
   const e = event("checkout.session.completed", s);
 
   const res = await post(request, e);
@@ -47,7 +47,7 @@ test("a paid plan checkout upgrades the wedding exactly once", async ({ request 
   const { data: w } = await admin.from("weddings").select("plan,trial_ends_at").eq("id", DEMO_WEDDING_ID).single();
   expect(w).toEqual({ plan: "plus", trial_ends_at: null });
   const { data: pay } = await admin.from("payments").select("plan,amount,status").eq("stripe_checkout_session_id", s.id);
-  expect(pay).toEqual([{ plan: "plus", amount: 14900, status: "paid" }]);
+  expect(pay).toEqual([{ plan: "plus", amount: 8000, status: "paid" }]);
 
   // Stripe redelivers: acknowledged, not applied again.
   const again = await post(request, e);
@@ -55,11 +55,11 @@ test("a paid plan checkout upgrades the wedding exactly once", async ({ request 
   // Same session under a different event id (e.g. async_payment_succeeded): still applied once.
   expect((await post(request, event("checkout.session.async_payment_succeeded", s))).status()).toBe(200);
   const { data: log } = await admin.from("audit_log").select("detail").eq("wedding_id", DEMO_WEDDING_ID).eq("action", "plan_change");
-  expect(log!.filter((l) => l.detail?.includes("$149.00 paid"))).toHaveLength(1);
+  expect(log!.filter((l) => l.detail?.includes("$80.00 paid"))).toHaveLength(1);
 
   // Upgrading to Signature later; a late Plus event can't downgrade it.
-  await post(request, event("checkout.session.completed", planSession("signature", 20000)));
-  await post(request, event("checkout.session.completed", planSession("plus", 14900)));
+  await post(request, event("checkout.session.completed", planSession("signature", 7000)));
+  await post(request, event("checkout.session.completed", planSession("plus", 8000)));
   const { data: w2 } = await admin.from("weddings").select("plan").eq("id", DEMO_WEDDING_ID).single();
   expect(w2!.plan).toBe("signature");
 });
@@ -72,7 +72,7 @@ test("the billing page shows payments to administrators only", async ({ page }) 
   await loginAs(page, "ayesha@example.com");
   await page.goto("/dashboard/billing");
   await expect(page.getByRole("heading", { name: "Payments" })).toBeVisible();
-  await expect(page.getByText("$149").first()).toBeVisible();
+  await expect(page.getByText("$80").first()).toBeVisible();
 });
 
 test("a vendor subscription sets the tier, and its end returns the listing to Basic", async ({ request }) => {
@@ -109,14 +109,14 @@ test("a vendor subscription sets the tier, and its end returns the listing to Ba
 const planOf = async () => (await admin.from("weddings").select("plan").eq("id", DEMO_WEDDING_ID).single()).data!.plan;
 const statusOf = async (sessionId: string) => (await admin.from("payments").select("status").eq("stripe_checkout_session_id", sessionId).single()).data!.status;
 const charge = (pi: string, refunded: boolean, amountRefunded: number) =>
-  ({ id: `ch_test_${uniq()}`, object: "charge", amount: 14900, amount_refunded: amountRefunded, refunded, currency: "usd", payment_intent: pi });
-const dispute = (pi: string, status: string, amount = 34900) =>
+  ({ id: `ch_test_${uniq()}`, object: "charge", amount: 8000, amount_refunded: amountRefunded, refunded, currency: "usd", payment_intent: pi });
+const dispute = (pi: string, status: string, amount = 15000) =>
   ({ id: `dp_test_${uniq()}`, object: "dispute", amount, currency: "usd", payment_intent: pi, reason: "fraudulent", status });
 
 test("a full refund takes the plan away; a partial refund doesn't", async ({ request }) => {
   await admin.from("payments").delete().eq("wedding_id", DEMO_WEDDING_ID); // start from no paid plans
   await admin.from("weddings").update({ plan: "free", trial_ends_at: null }).eq("id", DEMO_WEDDING_ID);
-  const s = planSession("plus", 14900);
+  const s = planSession("plus", 8000);
   await post(request, event("checkout.session.completed", s));
   expect(await planOf()).toBe("plus");
 
@@ -124,7 +124,7 @@ test("a full refund takes the plan away; a partial refund doesn't", async ({ req
   expect(await planOf()).toBe("plus");
   expect(await statusOf(s.id)).toBe("paid");
 
-  expect((await post(request, event("charge.refunded", charge(s.payment_intent, true, 14900)))).status()).toBe(200);
+  expect((await post(request, event("charge.refunded", charge(s.payment_intent, true, 8000)))).status()).toBe(200);
   expect(await planOf()).toBe("free");
   expect(await statusOf(s.id)).toBe("refunded");
   const { data: log } = await admin.from("audit_log").select("action,detail").eq("wedding_id", DEMO_WEDDING_ID).in("action", ["payment_refunded", "payment_partial_refund"]);
@@ -135,20 +135,20 @@ test("a full refund takes the plan away; a partial refund doesn't", async ({ req
 test("a dispute removes the plan until it's won; fraud warnings are logged", async ({ request }) => {
   await admin.from("payments").delete().eq("wedding_id", DEMO_WEDDING_ID); // start from no paid plans
   await admin.from("weddings").update({ plan: "free", trial_ends_at: null }).eq("id", DEMO_WEDDING_ID);
-  const plus = planSession("plus", 14900), sig = planSession("signature", 20000);
+  const plus = planSession("plus", 8000), sig = planSession("signature", 7000);
   await post(request, event("checkout.session.completed", plus));
   await post(request, event("checkout.session.completed", sig));
   expect(await planOf()).toBe("signature");
 
   // The Signature upgrade is disputed: the wedding falls back to what's still paid (Plus).
-  await post(request, event("charge.dispute.created", dispute(sig.payment_intent, "needs_response", 20000)));
+  await post(request, event("charge.dispute.created", dispute(sig.payment_intent, "needs_response", 7000)));
   expect(await planOf()).toBe("plus");
   expect(await statusOf(sig.id)).toBe("disputed");
 
   // Lost disputes change nothing further; a won dispute restores Signature.
-  await post(request, event("charge.dispute.closed", dispute(sig.payment_intent, "lost", 20000)));
+  await post(request, event("charge.dispute.closed", dispute(sig.payment_intent, "lost", 7000)));
   expect(await planOf()).toBe("plus");
-  await post(request, event("charge.dispute.closed", dispute(sig.payment_intent, "won", 20000)));
+  await post(request, event("charge.dispute.closed", dispute(sig.payment_intent, "won", 7000)));
   expect(await planOf()).toBe("signature");
   expect(await statusOf(sig.id)).toBe("paid");
 
@@ -172,9 +172,9 @@ test("a vendor checkout that hasn't been paid yet doesn't upgrade the listing", 
 
 test("unsigned or wrongly signed webhooks are rejected", async ({ request }) => {
   await admin.from("weddings").update({ plan: "free" }).eq("id", DEMO_WEDDING_ID);
-  const forged = await post(request, event("checkout.session.completed", planSession("signature", 34900)), "whsec_not_the_secret");
+  const forged = await post(request, event("checkout.session.completed", planSession("signature", 15000)), "whsec_not_the_secret");
   expect(forged.status()).toBe(400);
-  const unsigned = await request.post("/api/stripe/webhook", { data: event("checkout.session.completed", planSession("signature", 34900)) });
+  const unsigned = await request.post("/api/stripe/webhook", { data: event("checkout.session.completed", planSession("signature", 15000)) });
   expect(unsigned.status()).toBe(400);
   const { data: w } = await admin.from("weddings").select("plan").eq("id", DEMO_WEDDING_ID).single();
   expect(w!.plan).toBe("free");
