@@ -1,7 +1,7 @@
 "use server";
 
 import { TRADITIONS } from "../format";
-import { applyBetaPerks } from "../programs";
+import { applyBetaPerks, INVITE_ONLY, mayJoin } from "../programs";
 import { redirect } from "next/navigation";
 import { currentUser, organizerContext } from "../auth";
 import { audit, loadWedding, loadWeddingRow, mutate, newInviteToken, uid } from "../db";
@@ -23,6 +23,7 @@ export async function createWedding(input: OnboardingInput): Promise<{ error?: s
   const user = await currentUser();
   if (!user) redirect("/login");
   if (await organizerContext()) redirect("/dashboard");
+  if (!(await mayJoin(user.email, "couple"))) return { error: INVITE_ONLY };
   const clean = (s: string, n = 80) => String(s ?? "").trim().slice(0, n);
   if (!clean(input.partner1) || !clean(input.partner2)) return { error: "Please enter both names." };
   if (!input.events?.length) return { error: "Please choose at least one event." };

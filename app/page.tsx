@@ -34,7 +34,7 @@ const DEMO = [
 function HeroPreview() {
   const shadow = "shadow-[0_24px_60px_-28px_rgba(43,38,32,0.35)]";
   return (
-    <div className="relative aspect-[3/5] w-full overflow-hidden rounded-[28px] bg-[#f6efe6] sm:aspect-[4/5]" aria-label="A preview of Qubool: a guest's invitation and RSVP replies" role="img">
+    <div className="relative aspect-[3/5] w-full overflow-hidden rounded-[28px] bg-[#f6efe6] sm:aspect-[4/3] lg:aspect-square" aria-label="A preview of Qubool: a guest's invitation and RSVP replies" role="img">
       <div aria-hidden className="absolute inset-0 bg-[radial-gradient(60%_50%_at_20%_15%,#f3dcd5_0%,transparent_70%),radial-gradient(55%_45%_at_85%_80%,#e3e8de_0%,transparent_70%),radial-gradient(45%_40%_at_80%_10%,#efe2c9_0%,transparent_70%)]" />
 
       {/* A guest's personal invitation */}
@@ -72,73 +72,86 @@ export default function Landing() {
       <SiteHeader />
 
       <main>
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-24 pt-8 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
+        <section className="mx-auto grid max-w-6xl items-center gap-10 px-6 pb-16 pt-4 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:pt-8">
           <div className="fade-in min-w-0">
-            <p className="text-sm text-muted">Wedding planning, simplified</p>
-            <h1 className="mt-4 font-serif text-[3.25rem] leading-[1.02] tracking-tight min-[400px]:text-6xl sm:text-7xl">
-              One Wedding.<br /><span className="italic text-muted">Every Celebration.</span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-3 py-1 text-sm text-ink/80">
+              <span className="h-1.5 w-1.5 rounded-full bg-sage" /> Wedding planning, simplified
+            </span>
+            <h1 className="mt-5 font-serif text-[3.25rem] leading-[1.02] tracking-tight min-[400px]:text-6xl sm:text-7xl">
+              One Wedding.<br /><span className="italic text-gold">Every Celebration.</span>
             </h1>
-            <p className="mt-6 max-w-md text-lg leading-relaxed text-muted">
+            <p className="mt-5 max-w-md text-lg leading-relaxed text-ink/75">
               Your website, your guest list and every event, from the welcome dinner to the last dance, in one calm place.
             </p>
-            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <ButtonLink href="/signup" size="lg">Start free <ArrowRight className="h-4 w-4" /></ButtonLink>
-              {demoEnabled() && <Link href="#demo" className="text-sm underline-offset-4 hover:underline">See a sample wedding</Link>}
+            <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+              <ButtonLink href="/beta" size="lg">Request early access <ArrowRight className="h-4 w-4" /></ButtonLink>
+              {demoEnabled() && <Link href="#demo" className="text-[15px] font-medium underline-offset-4 hover:underline">See a sample wedding</Link>}
             </div>
-            <p className="mt-4 text-xs text-muted">Free to start. No card needed.</p>
+            <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink/70">
+              {["Free during the beta", "For couples and planners", "Invites sent in small groups"].map((t) => (
+                <li key={t} className="flex items-center gap-1.5"><Check className="h-4 w-4 text-sage" />{t}</li>
+              ))}
+            </ul>
           </div>
 
           <HeroPreview />
         </section>
 
-        <section className="border-t border-line">
-          <div className="mx-auto max-w-6xl px-6 py-24">
-            <h2 className="max-w-xl font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Everything for the wedding, nothing you don&apos;t need.</h2>
-            <div className="mt-14 grid gap-x-12 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="bg-white">
+          <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+            <div className="max-w-2xl">
+              <h2 className="font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Everything for the wedding, in one place</h2>
+              <p className="mt-3 text-lg text-ink/70">The tools you actually need, and none you don&apos;t.</p>
+            </div>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {FEATURES.map(({ icon: Icon, title, body }) => (
-                <div key={title}>
-                  <Icon className="h-5 w-5 text-ink/70" strokeWidth={1.5} />
-                  <h3 className="mt-4 font-medium">{title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-muted">{body}</p>
+                <div key={title} className="rounded-2xl border border-line bg-ivory/60 p-6">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm"><Icon className="h-5 w-5 text-gold" strokeWidth={1.6} /></span>
+                  <h3 className="mt-4 text-lg font-medium">{title}</h3>
+                  <p className="mt-1.5 text-[15px] leading-relaxed text-ink/70">{body}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-6">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={SITE_PHOTOS.receptionTable.replace("w=1200", "w=2000")} alt="A long candlelit dinner table" loading="lazy" className="aspect-[16/9] w-full rounded-[28px] object-cover sm:aspect-[21/9]" />
-        </section>
-
-        <section className="mx-auto max-w-6xl px-6 py-24">
-          <p className="text-sm text-muted">How it works</p>
-          <div className="mt-8 grid gap-10 md:grid-cols-3">
-            {STEPS.map((s) => (
-              <div key={s.n} className="border-t border-ink/15 pt-5">
-                <p className="text-xs tabular-nums text-muted">{s.n}</p>
-                <h3 className="mt-3 font-serif text-3xl tracking-tight">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
-              </div>
-            ))}
+        <section className="bg-cream/60">
+          <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-16 sm:py-20 lg:grid-cols-2 lg:gap-16">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={SITE_PHOTOS.receptionTable} alt="A long candlelit dinner table" loading="lazy" className="aspect-[4/3] w-full rounded-[28px] object-cover" />
+            <div>
+              <h2 className="font-serif text-4xl tracking-tight sm:text-5xl">How it works</h2>
+              <ol className="mt-8 space-y-6">
+                {STEPS.map((s, i) => (
+                  <li key={s.n} className="flex gap-4">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-medium text-ivory">{i + 1}</span>
+                    <div>
+                      <h3 className="text-lg font-medium">{s.title}</h3>
+                      <p className="mt-1 text-[15px] leading-relaxed text-ink/70">{s.body}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <ButtonLink href="/beta" className="mt-8">Request early access <ArrowRight className="h-4 w-4" /></ButtonLink>
+            </div>
           </div>
         </section>
 
         {demoEnabled() && (
-          <section id="demo" className="scroll-mt-6 border-t border-line bg-white">
-            <div className="mx-auto max-w-6xl px-6 py-24">
-              <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:items-end">
+          <section id="demo" className="scroll-mt-6 bg-white">
+            <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+              <div className="grid gap-8 lg:grid-cols-[1fr_1.4fr] lg:items-center">
                 <div>
                   <h2 className="font-serif text-4xl tracking-tight sm:text-5xl">See a sample wedding</h2>
-                  <p className="mt-3 max-w-sm text-muted">Look around a four-day wedding with private events and different guest lists. Nothing you do there is sent or saved for real.</p>
+                  <p className="mt-3 max-w-sm text-lg text-ink/70">Look around a four-day wedding with private events and different guest lists. Nothing you do there is sent or saved for real.</p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {DEMO.map((m) => (
                     <Link key={m.mode} href={`/demo/${m.mode}`} prefetch={false}
-                      className="group rounded-2xl border border-line p-5 transition hover:border-ink">
-                      <span className="block font-medium">{m.label}</span>
-                      <span className="mt-1 block text-sm text-muted">{m.sub}</span>
-                      <ArrowRight className="mt-6 h-4 w-4 text-muted transition group-hover:translate-x-0.5 group-hover:text-ink" />
+                      className="group flex flex-col rounded-2xl border border-line bg-ivory/60 p-5 transition hover:border-ink hover:bg-white">
+                      <span className="text-lg font-medium">{m.label}</span>
+                      <span className="mt-1 text-[15px] text-ink/70">{m.sub}</span>
+                      <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium">Open <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" /></span>
                     </Link>
                   ))}
                 </div>
@@ -148,31 +161,36 @@ export default function Landing() {
         )}
 
         <section className="border-t border-line">
-          <div className="mx-auto max-w-6xl px-6 py-24">
+          <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <h2 className="font-serif text-4xl tracking-tight sm:text-5xl">Simple pricing</h2>
-              <Link href="/pricing" className="text-sm underline-offset-4 hover:underline">Compare plans</Link>
+              <div>
+                <h2 className="font-serif text-4xl tracking-tight sm:text-5xl">Simple pricing</h2>
+                <p className="mt-3 text-lg text-ink/70">Complimentary for beta members. After the beta: free to start, and one payment per wedding if you need more.</p>
+              </div>
+              <Link href="/pricing" className="text-[15px] font-medium underline-offset-4 hover:underline">Compare plans</Link>
             </div>
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
               {PLAN_ORDER.map((p) => (
-                <div key={p} className={`rounded-2xl border p-6 ${p === "plus" ? "border-ink" : "border-line"}`}>
-                  <p className="font-medium">{PLANS[p].name}</p>
-                  <p className="mt-4 font-serif text-5xl tracking-tight">{PLANS[p].price ? `$${PLANS[p].price}` : "Free"}</p>
-                  <p className="mt-1 text-xs text-muted">{PLANS[p].billing}</p>
-                  <p className="mt-4 text-sm text-muted">{PLANS[p].tagline}</p>
+                <div key={p} className={`flex flex-col rounded-2xl border bg-white p-6 ${p === "plus" ? "border-ink shadow-[0_20px_50px_-30px_rgba(43,38,32,0.4)]" : "border-line"}`}>
+                  <div className="flex items-center justify-between"><p className="text-lg font-medium">{PLANS[p].name}</p>{p === "plus" && <span className="rounded-full bg-cream px-2.5 py-0.5 text-xs">Most popular</span>}</div>
+                  <p className="mt-3 font-serif text-5xl tracking-tight">{PLANS[p].price ? `$${PLANS[p].price}` : "Free"}</p>
+                  <p className="mt-1 text-sm text-ink/60">{PLANS[p].billing}</p>
+                  <ul className="mt-5 flex-1 space-y-2 text-[15px] text-ink/80">
+                    {PLANS[p].highlights.slice(0, 4).map((h) => <li key={h} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-sage" />{h}</li>)}
+                  </ul>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-6 pb-24">
-          <div className="rounded-[28px] bg-ink px-8 py-16 text-center text-ivory sm:px-16">
-            <h2 className="font-serif text-4xl tracking-tight sm:text-6xl">Start planning today.</h2>
-            <p className="mx-auto mt-4 max-w-md text-ivory/70">Set up your wedding in a few minutes. Your guests will thank you.</p>
-            <Link href="/signup" className="mt-8 inline-flex h-12 items-center rounded-full bg-ivory px-7 text-[15px] font-medium text-ink transition hover:bg-white">Start free</Link>
-            <p className="mt-6 text-sm text-ivory/60">
-              Planning for clients? <Link href="/beta" className="underline underline-offset-2 hover:text-ivory">Join the beta</Link>.{" "}
+        <section className="mx-auto max-w-6xl px-6 pb-16">
+          <div className="rounded-[28px] bg-ink px-8 py-14 text-center text-ivory sm:px-16">
+            <h2 className="font-serif text-4xl tracking-tight sm:text-6xl">Join the Qubool beta.</h2>
+            <p className="mx-auto mt-4 max-w-md text-lg text-ivory/75">We&apos;re inviting couples and planners in small groups. Early access is complimentary.</p>
+            <Link href="/beta" className="mt-8 inline-flex h-12 items-center rounded-full bg-ivory px-7 text-[15px] font-medium text-ink transition hover:bg-white">Request early access</Link>
+            <p className="mt-6 text-[15px] text-ivory/70">
+              Already invited? <Link href="/signup" className="underline underline-offset-2 hover:text-ivory">Create your account</Link>.{" "}
               Wedding vendor? <Link href="/founding-vendors" className="underline underline-offset-2 hover:text-ivory">Become a Founding Vendor</Link>.
             </p>
           </div>

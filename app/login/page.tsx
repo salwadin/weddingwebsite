@@ -30,7 +30,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <li>planner@example.com · read-only</li>
           </ul>
         </div>}
-        <p className="mt-5 text-center text-sm text-muted">New here? <Link href="/signup" className="text-ink underline">Create an account</Link></p>
+        <p className="mt-5 text-center text-sm text-muted">New here? <Link href="/beta" className="text-ink underline">Request early access</Link> · Invited? <Link href="/signup" className="text-ink underline">Create your account</Link></p>
       </div>
     </div>
   );

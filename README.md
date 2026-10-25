@@ -200,7 +200,7 @@ That's 163 households (477 people) with realistic RSVPs, a seating sample, 12 ve
 
 | | Essentials | Plus | Signature |
 |---|---|---|---|
-| Price | Free | $149 once per wedding | $349 once per wedding |
+| Price | Free | $80 once per wedding | $150 once per wedding |
 | Events / guests | 2 / 150 | 8 / 1,000 | Unlimited |
 | Website, private events, RSVPs, checklist, budget | ✓ | ✓ | ✓ |
 | Browse & message vendors | ✓ | ✓ | ✓ |

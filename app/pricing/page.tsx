@@ -5,7 +5,8 @@ import { PlanCards } from "@/components/plan-cards";
 export const metadata = { title: "Pricing" };
 
 const FAQ = [
-  ["Is it really free to start?", "Yes. Every new wedding gets 14 days with all features. After that you keep Essentials for free, or upgrade once for the whole wedding."],
+  ["How do I get started?", "Qubool is invite-only during the beta. Request early access, and when we invite you, everything is complimentary for as long as the beta runs."],
+  ["What happens after the beta?", "Essentials stays free. Plus and Signature are one payment for the whole wedding, and every new wedding gets 14 days with all features first."],
   ["Is it a subscription?", "No. Plus and Signature are one-time payments per wedding, so they last until your very last celebration."],
   ["Do guests pay anything?", "Never. Guests open their personal link and RSVP for free."],
   ["Do I pay to contact vendors?", "No. Browsing and messaging vendors is free on every plan."],
@@ -19,9 +20,9 @@ export default function Pricing() {
         <div className="py-10 text-center">
           <p className="text-xs uppercase tracking-[0.28em] text-gold">Pricing</p>
           <h1 className="mt-3 font-serif text-5xl sm:text-6xl">One payment for the whole wedding</h1>
-          <p className="mx-auto mt-3 max-w-xl text-muted">Start free with every feature for 14 days. Upgrade only if you need more events, a bigger guest list, or the planning studio.</p>
+          <p className="mx-auto mt-3 max-w-xl text-muted">Complimentary for beta members. After the beta, Essentials is free, and you upgrade once only if you need more events, a bigger guest list, or the planning studio.</p>
         </div>
-        <PlanCards action={(p) => <ButtonLink href="/signup" variant={p === "plus" ? "primary" : "outline"} className="w-full">{p === "free" ? "Start free" : "Start 14-day trial"}</ButtonLink>} />
+        <PlanCards action={(p) => <ButtonLink href="/beta" variant={p === "plus" ? "primary" : "outline"} className="w-full">Request early access</ButtonLink>} />
         <div className="mx-auto mt-16 max-w-3xl divide-y divide-line border-y border-line">
           {FAQ.map(([q, a]) => (
             <details key={q} className="group py-5">
