@@ -30,5 +30,5 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Paths that can carry an organizer or vendor session, and the apps' start page.
-  matcher: ["/", "/pricing", "/dashboard/:path*", "/onboarding", "/vendor", "/marketplace/:path*", "/w/:path*", "/login", "/reset-password"],
+  matcher: ["/", "/pricing", "/dashboard/:path*", "/onboarding", "/account/:path*", "/vendor", "/marketplace/:path*", "/w/:path*", "/login", "/reset-password"],
 };

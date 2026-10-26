@@ -93,6 +93,13 @@ export async function syncSubscription(admin: Supabase, sub: Stripe.Subscription
   };
 
   const { data: existing } = must(await admin.from("subscriptions").select("id").eq("stripe_subscription_id", sub.id));
+  // The listing was deleted with its owner's account (lib/account.ts): keep the record current, unlinked.
+  const { data: listing } = must(await admin.from("listings").select("id").eq("id", listingId).maybeSingle());
+  if (!listing) {
+    const { listing_id: _, ...rest } = fields;
+    if (existing?.length) must(await admin.from("subscriptions").update(rest).eq("id", existing[0].id));
+    return;
+  }
   if (existing?.length) {
     must(await admin.from("subscriptions").update(fields).eq("id", existing[0].id));
   } else {
@@ -142,6 +149,7 @@ async function setPlanPaymentStatus(admin: Supabase, paymentIntent: string | nul
   const pay = await planPaymentFor(admin, paymentIntent);
   if (!pay || pay.status === status) return false;
   must(await admin.from("payments").update({ status }).eq("id", pay.id));
+  if (!pay.wedding_id) return true; // the wedding was deleted with its account; the record stays
   const plan = await recomputePlan(admin, pay.wedding_id);
   const { data: w } = must(await admin.from("weddings").select("plan").eq("id", pay.wedding_id).maybeSingle());
   if (w && w.plan !== plan) must(await admin.from("weddings").update({ plan }).eq("id", pay.wedding_id));
@@ -170,7 +178,7 @@ async function handleRefund(admin: Supabase, charge: Stripe.Charge) {
   if (!charge.refunded) {
     // Partial refund: the couple keeps the plan; just note it.
     const pay = await planPaymentFor(admin, pi);
-    if (pay) must(await admin.from("audit_log").insert({ wedding_id: pay.wedding_id, actor: "Stripe", action: "payment_partial_refund", detail: `Partial refund of ${amount} on the ${PLANS[pay.plan as Plan].name} payment.` }));
+    if (pay?.wedding_id) must(await admin.from("audit_log").insert({ wedding_id: pay.wedding_id, actor: "Stripe", action: "payment_partial_refund", detail: `Partial refund of ${amount} on the ${PLANS[pay.plan as Plan].name} payment.` }));
     return;
   }
   if (await setPlanPaymentStatus(admin, pi, "refunded", `The ${amount} payment was refunded in full.`)) return;
