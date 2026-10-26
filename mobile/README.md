@@ -154,8 +154,9 @@ Until the keys are in Vercel, nothing is sent and nothing breaks.
 ### 6. Before the first submission, also check
 
 - **Account deletion (Apple rule 5.1.1(v))**: apps that let people sign up must let them
-  delete their account *inside the app*. Qubool doesn't have a "Delete my account"
-  button yet. Add one before submitting to Apple, or the review will be rejected.
+  delete their account *inside the app*. Qubool has it: couples under **Settings**,
+  vendors at the bottom of their vendor page, and `/account/delete`. Mention it in the
+  review notes. Deleting an account also forgets its phones for notifications.
 - **Review notes**: mention that couples get a notification when a guest RSVPs, and
   vendors when they receive an inquiry (rule 4.2, "minimum functionality").
 

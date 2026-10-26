@@ -9,6 +9,8 @@ const email = `couple.${Date.now()}@onboarding.qubool.test`;
 let userId = "";
 
 test.beforeAll(async () => {
+  // Qubool is invite-only during the beta: this couple's application has been invited.
+  await admin.from("beta_applications").insert({ kind: "couple", name: "Jordan Lee", email, status: "invited", invited_at: new Date().toISOString() });
   const { data, error } = await admin.auth.admin.createUser({ email, password: DEMO_PASSWORD, email_confirm: true, user_metadata: { name: "Jordan Lee", kind: "couple" } });
   if (error) throw error;
   userId = data.user.id;
@@ -17,6 +19,7 @@ test.afterAll(async () => {
   const { data: w } = await admin.from("wedding_collaborators").select("wedding_id").eq("user_id", userId);
   for (const r of w ?? []) await admin.from("weddings").delete().eq("id", r.wedding_id);
   await admin.auth.admin.deleteUser(userId);
+  await admin.from("beta_applications").delete().eq("email", email);
 });
 
 test("a couple adds their own event, picks 'customize later', and starts with a clean, photo-free site", async ({ page }) => {

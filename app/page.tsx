@@ -1,30 +1,27 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Check, Image as ImageIcon, Mail, MessageSquare, PiggyBank, Users } from "lucide-react";
-import { ButtonLink, Logo } from "@/components/ui";
+import { ButtonLink } from "@/components/ui";
 import { demoEnabled } from "@/lib/supabase/env";
-import { SiteHeader } from "@/components/site-header";
+import { SiteFooter, SiteHeader } from "@/components/site-header";
+import { TwoViews } from "@/components/landing/two-views";
 import { SITE_PHOTOS } from "@/lib/photos";
 import { PLANS, PLAN_ORDER } from "@/lib/plans";
 
 const FEATURES = [
-  { icon: Mail, title: "Personal invitations", body: "Every household gets its own link and sees only the events they're invited to." },
-  { icon: CalendarDays, title: "Every event, one plan", body: "Each celebration has its own guest list, details and RSVPs, all in one place." },
-  { icon: Users, title: "Planned together", body: "Invite family or a planner, each with exactly the access they need." },
-  { icon: MessageSquare, title: "RSVPs, handled", body: "Replies and meal choices come in on their own, with gentle reminders by email or text." },
-  { icon: PiggyBank, title: "A budget that adds up", body: "Track every cost by event, and who's covering what." },
-  { icon: ImageIcon, title: "A website that's yours", body: "Your photos, your colors, your words. Change anything, any time." },
+  { icon: Mail, title: "Personal links", body: "Every household, its own invitation." },
+  { icon: CalendarDays, title: "Every event", body: "Dinners, ceremonies, brunches. All in one." },
+  { icon: Users, title: "Plan together", body: "Bring in family or a planner." },
+  { icon: MessageSquare, title: "RSVPs, handled", body: "Replies and reminders, by email or text." },
+  { icon: PiggyBank, title: "Budget", body: "Every cost, every event." },
+  { icon: ImageIcon, title: "Your website", body: "Your photos, colors and words." },
 ];
 
-const STEPS = [
-  { n: "01", title: "Add your events", body: "One day or five. A ceremony, a dinner, a brunch, whatever you're celebrating." },
-  { n: "02", title: "Invite your guests", body: "Import your list and send each household its personal invitation." },
-  { n: "03", title: "Watch replies arrive", body: "See who's coming to what, and follow up with one click." },
-];
+const STEPS = ["Add your events", "Invite your guests", "Watch replies arrive"];
 
 const DEMO = [
-  { mode: "admin", label: "As the couple", sub: "The planning dashboard" },
-  { mode: "all", label: "As a guest", sub: "A personal invitation" },
-  { mode: "vendor", label: "As a vendor", sub: "Listing and inquiries" },
+  { mode: "admin", label: "As the couple" },
+  { mode: "all", label: "As a guest" },
+  { mode: "vendor", label: "As a vendor" },
 ];
 
 /**
@@ -34,13 +31,13 @@ const DEMO = [
 function HeroPreview() {
   const shadow = "shadow-[0_24px_60px_-28px_rgba(43,38,32,0.35)]";
   return (
-    <div className="relative aspect-[3/5] w-full overflow-hidden rounded-[28px] bg-[#f6efe6] sm:aspect-[4/5]" aria-label="A preview of Qubool: a guest's invitation and RSVP replies" role="img">
+    <div className="relative aspect-[3/5] w-full overflow-hidden rounded-[28px] bg-[#f6efe6] sm:aspect-[4/3] lg:aspect-square" aria-label="A preview of Qubool: a guest's invitation and RSVP replies" role="img">
       <div aria-hidden className="absolute inset-0 bg-[radial-gradient(60%_50%_at_20%_15%,#f3dcd5_0%,transparent_70%),radial-gradient(55%_45%_at_85%_80%,#e3e8de_0%,transparent_70%),radial-gradient(45%_40%_at_80%_10%,#efe2c9_0%,transparent_70%)]" />
 
       {/* A guest's personal invitation */}
       <div className={`absolute left-[12%] right-[10%] top-[9%] rounded-2xl bg-white p-6 sm:p-7 ${shadow}`}>
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted">You&apos;re invited</p>
-        <p className="mt-3 text-sm text-muted">Dear the Chens,</p>
+        <p className="mt-3 text-sm text-muted">Dear Chen family,</p>
         <p className="mt-1 font-serif text-[2rem] leading-none tracking-tight sm:text-4xl">Jordan &amp; Priya</p>
         <ul className="mt-5 space-y-2.5 text-sm">
           {[["Welcome dinner", "Fri, June 11"], ["Ceremony", "Sat, June 12"], ["Reception", "Sat, June 12"]].map(([e, d]) => (
@@ -68,129 +65,103 @@ function HeroPreview() {
 
 export default function Landing() {
   return (
-    <div className="min-h-screen">
-      <SiteHeader />
+    <div className="min-h-screen bg-[#f7f0e6]">
+      {/* Warm hero band: header, promise, and the product */}
+      <div className="relative overflow-hidden bg-[#f1e6d6]">
+        <div aria-hidden className="absolute inset-0 bg-[radial-gradient(50%_60%_at_10%_0%,#f6dcd2_0%,transparent_70%),radial-gradient(45%_55%_at_95%_100%,#e5e9da_0%,transparent_70%)]" />
+        <div className="relative">
+          <SiteHeader />
+          <section className="mx-auto grid max-w-6xl items-center gap-10 px-6 pb-14 pt-2 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
+            <div className="fade-in min-w-0">
+              <h1 className="font-serif text-[3.4rem] leading-[1] tracking-tight min-[400px]:text-6xl sm:text-7xl xl:text-[5.25rem]">
+                One Wedding.<br /><span className="italic text-gold">Every Celebration.</span>
+              </h1>
+              <p className="mt-6 text-xl text-ink/80">A personal invitation for every guest.</p>
+              <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <ButtonLink href="/beta" size="lg">Request early access <ArrowRight className="h-4 w-4" /></ButtonLink>
+                {demoEnabled() && <Link href="#demo" className="text-[15px] font-medium underline-offset-4 hover:underline">See a sample</Link>}
+              </div>
+              <p className="mt-4 flex items-center gap-1.5 text-sm text-ink/70"><Check className="h-4 w-4 text-sage" /> Free during the beta</p>
+            </div>
+            <HeroPreview />
+          </section>
+        </div>
+      </div>
 
       <main>
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-24 pt-8 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
-          <div className="fade-in min-w-0">
-            <p className="text-sm text-muted">Wedding planning, simplified</p>
-            <h1 className="mt-4 font-serif text-[3.25rem] leading-[1.02] tracking-tight min-[400px]:text-6xl sm:text-7xl">
-              One Wedding.<br /><span className="italic text-muted">Every Celebration.</span>
-            </h1>
-            <p className="mt-6 max-w-md text-lg leading-relaxed text-muted">
-              Your website, your guest list and every event, from the welcome dinner to the last dance, in one calm place.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <ButtonLink href="/signup" size="lg">Start free <ArrowRight className="h-4 w-4" /></ButtonLink>
-              {demoEnabled() && <Link href="#demo" className="text-sm underline-offset-4 hover:underline">See a sample wedding</Link>}
-            </div>
-            <p className="mt-4 text-xs text-muted">Free to start. No card needed.</p>
+        <section className="mx-auto max-w-6xl px-6 py-14">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <h2 className="font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Every guest, <span className="italic text-gold">their own invitation.</span></h2>
+            <p className="text-lg text-ink/70">Tick who&apos;s invited. They see only their events.</p>
           </div>
-
-          <HeroPreview />
+          <div className="mt-8 min-w-0"><TwoViews /></div>
         </section>
 
-        <section className="border-t border-line">
-          <div className="mx-auto max-w-6xl px-6 py-24">
-            <h2 className="max-w-xl font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Everything for the wedding, nothing you don&apos;t need.</h2>
-            <div className="mt-14 grid gap-x-12 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-              {FEATURES.map(({ icon: Icon, title, body }) => (
-                <div key={title}>
-                  <Icon className="h-5 w-5 text-ink/70" strokeWidth={1.5} />
-                  <h3 className="mt-4 font-medium">{title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-muted">{body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-6xl px-6">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={SITE_PHOTOS.receptionTable.replace("w=1200", "w=2000")} alt="A long candlelit dinner table" loading="lazy" className="aspect-[16/9] w-full rounded-[28px] object-cover sm:aspect-[21/9]" />
-        </section>
-
-        <section className="mx-auto max-w-6xl px-6 py-24">
-          <p className="text-sm text-muted">How it works</p>
-          <div className="mt-8 grid gap-10 md:grid-cols-3">
-            {STEPS.map((s) => (
-              <div key={s.n} className="border-t border-ink/15 pt-5">
-                <p className="text-xs tabular-nums text-muted">{s.n}</p>
-                <h3 className="mt-3 font-serif text-3xl tracking-tight">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
+        <section className="bg-[#ece0cf]">
+          <div className="mx-auto grid max-w-6xl gap-3 px-6 py-14 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map(({ icon: Icon, title, body }) => (
+              <div key={title} className="flex items-center gap-4 rounded-2xl bg-[#f8f2ea] p-5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink"><Icon className="h-5 w-5 text-gold-soft" strokeWidth={1.6} /></span>
+                <div><h3 className="text-lg font-medium leading-tight">{title}</h3><p className="text-[15px] text-ink/70">{body}</p></div>
               </div>
             ))}
           </div>
         </section>
 
+        <section className="relative overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={SITE_PHOTOS.receptionTable.replace("w=1200", "w=2000")} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-ink/70" />
+          <div className="relative mx-auto max-w-6xl px-6 py-16 text-ivory">
+            <h2 className="font-serif text-4xl tracking-tight sm:text-5xl">How it works</h2>
+            <ol className="mt-8 grid gap-6 sm:grid-cols-3">
+              {STEPS.map((t, i) => (
+                <li key={t} className="flex items-center gap-4">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gold font-serif text-2xl text-ink">{i + 1}</span>
+                  <span className="font-serif text-2xl leading-tight">{t}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
         {demoEnabled() && (
-          <section id="demo" className="scroll-mt-6 border-t border-line bg-white">
-            <div className="mx-auto max-w-6xl px-6 py-24">
-              <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:items-end">
-                <div>
-                  <h2 className="font-serif text-4xl tracking-tight sm:text-5xl">See a sample wedding</h2>
-                  <p className="mt-3 max-w-sm text-muted">Look around a four-day wedding with private events and different guest lists. Nothing you do there is sent or saved for real.</p>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {DEMO.map((m) => (
-                    <Link key={m.mode} href={`/demo/${m.mode}`} prefetch={false}
-                      className="group rounded-2xl border border-line p-5 transition hover:border-ink">
-                      <span className="block font-medium">{m.label}</span>
-                      <span className="mt-1 block text-sm text-muted">{m.sub}</span>
-                      <ArrowRight className="mt-6 h-4 w-4 text-muted transition group-hover:translate-x-0.5 group-hover:text-ink" />
-                    </Link>
-                  ))}
-                </div>
-              </div>
+          <section id="demo" className="scroll-mt-6 mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-6 py-14">
+            <h2 className="font-serif text-4xl tracking-tight sm:text-5xl">Take a look</h2>
+            <div className="flex flex-wrap gap-3">
+              {DEMO.map((m) => (
+                <Link key={m.mode} href={`/demo/${m.mode}`} prefetch={false}
+                  className="inline-flex h-12 items-center gap-2 rounded-full border border-ink/20 bg-[#fbf6ef] px-6 text-[15px] font-medium transition hover:border-ink hover:bg-white">
+                  {m.label} <ArrowRight className="h-4 w-4" />
+                </Link>
+              ))}
             </div>
           </section>
         )}
 
-        <section className="border-t border-line">
-          <div className="mx-auto max-w-6xl px-6 py-24">
+        <section className="bg-[#ece0cf]">
+          <div className="mx-auto max-w-6xl px-6 py-14">
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <h2 className="font-serif text-4xl tracking-tight sm:text-5xl">Simple pricing</h2>
-              <Link href="/pricing" className="text-sm underline-offset-4 hover:underline">Compare plans</Link>
+              <h2 className="font-serif text-4xl tracking-tight sm:text-5xl">Pricing</h2>
+              <p className="text-lg text-ink/70">Free during the beta. <Link href="/pricing" className="font-medium text-ink underline-offset-4 hover:underline">Compare plans</Link></p>
             </div>
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
+            <div className="mt-8 grid gap-3 md:grid-cols-3">
               {PLAN_ORDER.map((p) => (
-                <div key={p} className={`rounded-2xl border p-6 ${p === "plus" ? "border-ink" : "border-line"}`}>
-                  <p className="font-medium">{PLANS[p].name}</p>
-                  <p className="mt-4 font-serif text-5xl tracking-tight">{PLANS[p].price ? `$${PLANS[p].price}` : "Free"}</p>
-                  <p className="mt-1 text-xs text-muted">{PLANS[p].billing}</p>
-                  <p className="mt-4 text-sm text-muted">{PLANS[p].tagline}</p>
+                <div key={p} className={`flex flex-col rounded-2xl p-6 ${p === "plus" ? "bg-ink text-ivory" : "bg-[#f8f2ea]"}`}>
+                  <p className="text-lg font-medium">{PLANS[p].name}</p>
+                  <p className="mt-2 font-serif text-5xl tracking-tight">{PLANS[p].price ? `$${PLANS[p].price}` : "Free"}</p>
+                  <p className={`mt-1 text-sm ${p === "plus" ? "text-ivory/60" : "text-ink/60"}`}>{PLANS[p].billing}</p>
+                  <ul className="mt-5 space-y-1.5 text-[15px]">
+                    {PLANS[p].highlights.slice(1, 4).map((h) => <li key={h} className="flex gap-2"><Check className={`mt-0.5 h-4 w-4 shrink-0 ${p === "plus" ? "text-gold-soft" : "text-sage"}`} />{h}</li>)}
+                  </ul>
                 </div>
               ))}
             </div>
           </div>
         </section>
-
-        <section className="mx-auto max-w-6xl px-6 pb-24">
-          <div className="rounded-[28px] bg-ink px-8 py-16 text-center text-ivory sm:px-16">
-            <h2 className="font-serif text-4xl tracking-tight sm:text-6xl">Start planning today.</h2>
-            <p className="mx-auto mt-4 max-w-md text-ivory/70">Set up your wedding in a few minutes. Your guests will thank you.</p>
-            <Link href="/signup" className="mt-8 inline-flex h-12 items-center rounded-full bg-ivory px-7 text-[15px] font-medium text-ink transition hover:bg-white">Start free</Link>
-            <p className="mt-6 text-sm text-ivory/60">
-              Planning for clients? <Link href="/beta" className="underline underline-offset-2 hover:text-ivory">Join the beta</Link>.{" "}
-              Wedding vendor? <Link href="/founding-vendors" className="underline underline-offset-2 hover:text-ivory">Become a Founding Vendor</Link>.
-            </p>
-          </div>
-        </section>
       </main>
 
-      <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-10 text-sm text-muted">
-          <div className="flex items-center gap-3"><Logo className="text-xl text-ink" /><span className="hidden sm:inline">One Wedding. Every Celebration.</span></div>
-          <nav className="flex flex-wrap gap-x-5 gap-y-2">
-            <Link href="/pricing" className="hover:text-ink">Pricing</Link>
-            <Link href="/marketplace" className="hover:text-ink">Vendors</Link>
-            <Link href="/privacy" className="hover:text-ink">Privacy</Link>
-            <Link href="/terms" className="hover:text-ink">Terms</Link>
-            <Link href="/sms" className="hover:text-ink">Text messages</Link>
-          </nav>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

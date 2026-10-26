@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { homeFor, siteUrl } from "../auth";
 import { forgetDevice } from "../push/device";
 import { serverClient } from "../supabase/server";
+import { INVITE_ONLY, mayJoin } from "../programs";
 import type { FormState } from "./site";
 
 const isEmail = (s: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
@@ -30,6 +31,7 @@ export async function signup(_prev: FormState, form: FormData): Promise<FormStat
   if (name.length < 2) return { error: "Please enter your name." };
   if (!isEmail(email)) return { error: "Please enter a valid email." };
   if (password.length < 8) return { error: "Please choose a password with at least 8 characters." };
+  if (!(await mayJoin(email, "couple"))) return { error: INVITE_ONLY };
   const sb = await serverClient();
   const { data, error } = await sb.auth.signUp({
     email, password, options: { data: { name, kind: "couple" }, emailRedirectTo: await siteUrl("/auth/confirm?next=/onboarding") },

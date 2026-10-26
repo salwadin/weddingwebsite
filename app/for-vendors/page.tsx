@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 import { vendorSignup } from "@/lib/actions/marketplace";
 import { LISTING_TIERS } from "@/lib/plans";
 import { Card } from "@/components/ui";
-import { SiteHeader } from "@/components/site-header";
+import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { VendorSignupForm } from "@/components/market/vendor-signup";
 
 export const metadata = { title: "List your wedding business" };
@@ -32,7 +32,7 @@ export default function ForVendors() {
           </div>
           <Card className="p-6">
             <h2 className="font-serif text-3xl">Create your free listing</h2>
-            <p className="mb-5 mt-1 text-sm text-muted">Takes two minutes. Publish when you&apos;re ready.</p>
+            <p className="mb-5 mt-1 text-sm text-muted">For approved Founding Vendors during the beta: use the email you applied with. Not approved yet? <a href="/founding-vendors#apply" className="underline">Apply here</a>.</p>
             <VendorSignupForm action={vendorSignup} />
           </Card>
         </div>
@@ -49,6 +49,7 @@ export default function ForVendors() {
           ))}
         </div>
       </section>
+      <SiteFooter />
     </div>
   );
 }

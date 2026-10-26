@@ -20,6 +20,7 @@ import type { ListingTier } from "@/lib/types";
 import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, Logo, Select, Stat, Textarea } from "@/components/ui";
 import { DemoBar } from "@/components/demo-bar";
 import { PushPrompt } from "@/components/push-prompt";
+import { DeleteAccountCard } from "@/components/delete-account-card";
 import { DEMO_VENDOR_EMAIL } from "@/lib/seed";
 
 export const metadata = { title: "Vendor portal" };
@@ -188,6 +189,8 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
             <div><Button size="lg">Save listing</Button></div>
           </form>
         </Card>
+
+        <div className="mt-6 max-w-2xl"><DeleteAccountCard user={user} /></div>
       </main>
       {user.email === DEMO_VENDOR_EMAIL && <DemoBar current="Vendor · Noor Light Studios" />}
     </div>
