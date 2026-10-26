@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ivory: #fbf8f2;
+  --color-ivory: #f8f1e7; /* warm cream: the page background on Qubool's own pages and dashboard */
   --color-cream: #f4eee3;
   --color-sand: #e9dfcf;
   --color-ink: #2b2620;

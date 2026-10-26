@@ -2,7 +2,7 @@ import { Check, Gift, MessageCircleHeart, Sparkles } from "lucide-react";
 import { submitBetaApplication } from "@/lib/actions/programs";
 import { SITE_PHOTOS } from "@/lib/photos";
 import { Card } from "@/components/ui";
-import { SiteHeader } from "@/components/site-header";
+import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { BetaApplicationForm } from "@/components/programs/forms";
 
 export const metadata = {
@@ -61,6 +61,7 @@ export default function Beta() {
         <p className="mt-2 text-sm text-muted">It takes about two minutes. We invite people in small groups and will email you when it&apos;s your turn.</p>
         <Card className="mt-6 p-6 sm:p-8"><BetaApplicationForm action={submitBetaApplication} /></Card>
       </section>
+      <SiteFooter />
     </div>
   );
 }
