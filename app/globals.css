@@ -65,3 +65,6 @@ body {
 .fade-in { animation: var(--animate-rise); }
 
 @media print { .no-print { display: none !important; } }
+
+/* In the iOS app (components/native-bridge.tsx), fields under 16px make the page zoom in when focused. */
+.native-app :is(input, select, textarea) { font-size: max(16px, 1em); }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarHeart, CheckSquare, CreditCard, Globe, Home, LayoutGrid, Mail, PiggyBank, Settings, Shirt, Store, UserCheck, Users } from "lucide-react";
 import { cn } from "@/lib/format";
+import { nativeShare, useNativeApp } from "@/components/native-bridge";
 
 const ICONS = { dashboard: Home, website: Globe, events: CalendarHeart, guests: Users, invitations: Mail, rsvps: UserCheck, checklist: CheckSquare, budget: PiggyBank, vendors: Store, settings: Settings, outfits: Shirt, studio: LayoutGrid, billing: CreditCard };
 export type NavKey = keyof typeof ICONS;
@@ -29,15 +30,18 @@ export function DashNav({ items }: { items: { key: NavKey; href: string; label: 
   );
 }
 
+/** Copies a link; in the Qubool app it opens the share sheet instead (which can copy too). */
 export function CopyButton({ text, label = "Copy", className }: { text: string; label?: string; className?: string }) {
+  const native = useNativeApp();
   return (
     <button type="button" className={cn("inline-flex h-8 items-center rounded-full border border-line bg-white px-3 text-xs font-medium hover:bg-cream", className)}
       onClick={async (e) => {
         const full = text.startsWith("/") ? window.location.origin + text : text;
+        if (await nativeShare(full)) return;
         await navigator.clipboard.writeText(full);
         const b = e.currentTarget; const old = b.textContent; b.textContent = "Copied ✓"; setTimeout(() => (b.textContent = old), 1400);
       }}>
-      {label}
+      {native ? label.replace(/^Copy/, "Share") : label}
     </button>
   );
 }
