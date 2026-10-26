@@ -148,7 +148,7 @@ export function LogoMark({ className }: { className?: string }) {
 export function Logo({ className }: { className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-2 font-serif text-2xl tracking-tight", className)}>
-      <LogoMark />
+      <LogoMark className="h-[0.9em] w-[0.9em]" />
       Qubool
     </span>
   );

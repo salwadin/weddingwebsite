@@ -4,7 +4,7 @@ import { LISTING_TIERS } from "@/lib/plans";
 import { FOUNDING_SPOTS, foundingSpotsLeft } from "@/lib/programs";
 import { SITE_PHOTOS } from "@/lib/photos";
 import { Card, Progress } from "@/components/ui";
-import { SiteHeader } from "@/components/site-header";
+import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { VendorApplicationForm } from "@/components/programs/forms";
 
 export const metadata = {
@@ -87,6 +87,7 @@ export default async function FoundingVendors() {
         </p>
         <Card className="mt-6 p-6 sm:p-8"><VendorApplicationForm action={submitVendorApplication} /></Card>
       </section>
+      <SiteFooter />
     </div>
   );
 }

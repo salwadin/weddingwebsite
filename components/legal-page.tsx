@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { SiteHeader } from "@/components/site-header";
+import { SiteFooter, SiteHeader } from "@/components/site-header";
 
 export const CONTACT_EMAIL = "admin@qubool.app";
 
@@ -19,6 +19,7 @@ export function LegalPage({ title, updated, intro, children }: { title: string; 
           <Link href="/privacy" className="underline underline-offset-2">Privacy policy</Link> · <Link href="/terms" className="underline underline-offset-2">Terms of service</Link> · <Link href="/sms" className="underline underline-offset-2">Text messages</Link> · <a href={`mailto:${CONTACT_EMAIL}`} className="underline underline-offset-2">{CONTACT_EMAIL}</a>
         </p>
       </main>
+      <SiteFooter />
     </div>
   );
 }
