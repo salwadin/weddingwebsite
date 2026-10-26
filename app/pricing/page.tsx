@@ -1,5 +1,5 @@
 import { ButtonLink } from "@/components/ui";
-import { SiteHeader } from "@/components/site-header";
+import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { PlanCards } from "@/components/plan-cards";
 
 export const metadata = { title: "Pricing" };
@@ -20,7 +20,7 @@ export default function Pricing() {
         <div className="py-10 text-center">
           <p className="text-xs uppercase tracking-[0.28em] text-gold">Pricing</p>
           <h1 className="mt-3 font-serif text-5xl sm:text-6xl">One payment for the whole wedding</h1>
-          <p className="mx-auto mt-3 max-w-xl text-muted">Complimentary for beta members. After the beta, Essentials is free, and you upgrade once only if you need more events, a bigger guest list, or the planning studio.</p>
+          <p className="mx-auto mt-3 max-w-xl text-muted">Free during the beta. After that, one payment per wedding.</p>
         </div>
         <PlanCards action={(p) => <ButtonLink href="/beta" variant={p === "plus" ? "primary" : "outline"} className="w-full">Request early access</ButtonLink>} />
         <div className="mx-auto mt-16 max-w-3xl divide-y divide-line border-y border-line">
@@ -32,6 +32,7 @@ export default function Pricing() {
           ))}
         </div>
       </main>
+      <SiteFooter />
     </div>
   );
 }
