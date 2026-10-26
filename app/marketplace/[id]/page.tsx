@@ -11,7 +11,7 @@ import { can, scopeFor } from "@/lib/access";
 import { recordView, saveToMyVendors, sendInquiry } from "@/lib/actions/marketplace";
 import { price, TRADITION_LABELS, VENDOR_TAGS } from "@/lib/marketplace";
 import { Badge, Button, Card } from "@/components/ui";
-import { SiteHeader } from "@/components/site-header";
+import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { InquiryForm } from "@/components/market/inquiry-form";
 import { ListingCard } from "@/components/market/listing-card";
 
@@ -114,6 +114,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
           </section>
         )}
       </main>
+      <SiteFooter />
     </div>
   );
 }

@@ -4,18 +4,20 @@ import { PLANS } from "@/lib/plans";
 import { createHousehold } from "@/lib/actions/dashboard";
 import { SIDES, TAGS } from "@/lib/format";
 import { Button, Card, Checkbox, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
+import { inNativeApp } from "@/lib/native";
 
 export default async function NewHousehold() {
   const o = await requireOrg("guests", "edit");
   const hh = new Set(o.d.households.filter((h) => h.weddingId === o.ctx.wedding.id).map((h) => h.id));
   const used = o.d.guests.filter((g) => hh.has(g.householdId)).length;
   const max = PLANS[o.plan].maxGuests;
+  const app = await inNativeApp();
   return (
     <>
       <Link href="/dashboard/guests" className="text-xs text-muted hover:text-ink">← Guest list</Link>
       <PageHeader title="Add a household" description="Invite a whole family under one name. One person will be able to RSVP for everyone." />
       {max !== Infinity && used >= max * 0.9 && (
-        <p className="mb-4 rounded-xl bg-gold-soft/50 px-4 py-2.5 text-sm">You&apos;re using {used} of the {max} guests in your {PLANS[o.plan].name} plan. <Link href="/dashboard/billing" className="underline">Upgrade</Link> to invite more.</p>
+        <p className="mb-4 rounded-xl bg-gold-soft/50 px-4 py-2.5 text-sm">You&apos;re using {used} of the {max} guests in your {PLANS[o.plan].name} plan.{!app && <> <Link href="/dashboard/billing" className="underline">Upgrade</Link> to invite more.</>}</p>
       )}
       <form action={createHousehold}>
         <Card className="grid gap-5 p-6 md:grid-cols-2">

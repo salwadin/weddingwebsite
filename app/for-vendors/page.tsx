@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 import { vendorSignup } from "@/lib/actions/marketplace";
 import { LISTING_TIERS } from "@/lib/plans";
 import { Card } from "@/components/ui";
-import { SiteHeader } from "@/components/site-header";
+import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { VendorSignupForm } from "@/components/market/vendor-signup";
 
 export const metadata = { title: "List your wedding business" };
@@ -49,6 +49,7 @@ export default function ForVendors() {
           ))}
         </div>
       </section>
+      <SiteFooter />
     </div>
   );
 }

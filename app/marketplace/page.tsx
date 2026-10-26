@@ -5,7 +5,7 @@ import { inDemo } from "@/lib/demo";
 import { cn } from "@/lib/format";
 import { CATEGORIES, TIER_RANK, TRADITION_LABELS, VENDOR_TAGS } from "@/lib/marketplace";
 import { ButtonLink, Empty, Input, Select } from "@/components/ui";
-import { SiteHeader } from "@/components/site-header";
+import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { ListingCard } from "@/components/market/listing-card";
 
 export const metadata = { title: "Wedding vendors", description: "Wedding vendors who know multicultural, multi-day celebrations." };
@@ -94,6 +94,7 @@ export default async function Marketplace({ searchParams }: { searchParams: Prom
           <ButtonLink href="/for-vendors">List your business</ButtonLink>
         </div>
       </main>
+      <SiteFooter />
     </div>
   );
 }

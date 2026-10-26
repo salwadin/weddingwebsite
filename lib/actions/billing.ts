@@ -10,6 +10,7 @@ import { PLAN_ORDER, PLANS } from "../plans";
 import { checkoutExpiry, paymentsEnabled, planLineItem, stripe, upgradePrice, CHECKOUT_LABEL } from "../stripe";
 import { adminClient } from "../supabase/server";
 import type { Plan } from "../types";
+import { inNativeApp } from "@/lib/native";
 
 /**
  * Buy a plan. Outside demo mode this opens Stripe Checkout (a one-time payment
@@ -23,7 +24,7 @@ export async function changePlan(form: FormData) {
   const o = await requireOrg("billing", "edit");
   const w = o.ctx.wedding;
   const plan = String(form.get("plan")) as Plan;
-  if (!(plan in PLANS)) return;
+  if (!(plan in PLANS) || await inNativeApp()) return;
   if (isDemoWedding(w.id)) {
     const { error } = await adminClient().from("weddings").update({ plan, trial_ends_at: null }).eq("id", w.id);
     if (error) throw new Error(error.message);

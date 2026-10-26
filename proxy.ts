@@ -18,11 +18,17 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  // The iOS and Android apps open on sign-in (or the account's home), not the marketing
+  // and pricing pages: the apps can't offer plans for sale (lib/native.ts).
+  if ((request.headers.get("user-agent") ?? "").includes("QuboolApp") && ["/", "/pricing"].includes(request.nextUrl.pathname)) {
+    const home = !user ? "/login" : user.user_metadata?.kind === "vendor" ? "/vendor" : "/dashboard";
+    return NextResponse.redirect(new URL(home, request.url));
+  }
   return response;
 }
 
 export const config = {
-  // Only paths that can carry an organizer or vendor session.
-  matcher: ["/dashboard/:path*", "/onboarding", "/account/:path*", "/vendor", "/marketplace/:path*", "/w/:path*", "/login", "/reset-password"],
+  // Paths that can carry an organizer or vendor session, and the apps' start page.
+  matcher: ["/", "/pricing", "/dashboard/:path*", "/onboarding", "/account/:path*", "/vendor", "/marketplace/:path*", "/w/:path*", "/login", "/reset-password"],
 };

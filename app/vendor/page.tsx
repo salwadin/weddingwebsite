@@ -11,6 +11,7 @@ import { logout } from "@/lib/actions/auth";
 import { changeListingTier, openBillingPortal, setInquiryStatus, updateListing } from "@/lib/actions/marketplace";
 import { confirmCheckout } from "@/lib/payments";
 import { paymentsEnabled } from "@/lib/stripe";
+import { inNativeApp } from "@/lib/native";
 import { adminClient } from "@/lib/supabase/server";
 import { cn, shortDate } from "@/lib/format";
 import { CATEGORIES, TRADITION_LABELS, VENDOR_TAGS } from "@/lib/marketplace";
@@ -38,6 +39,7 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
   const founding = mine!.founding_number ? { number: mine!.founding_number as number, until: new Date(mine!.founding_until as string) } : null;
   const l = fromRow("listings", mine!);
   const demo = isDemoEmail(user.email), live = !demo && paymentsEnabled();
+  const app = await inNativeApp();
   // Back from Stripe Checkout: apply the subscription now rather than waiting for the webhook.
   if (sp.session_id && live) {
     const tier = await confirmCheckout(adminClient(), sp.session_id, { listing_id: l.id });
@@ -118,7 +120,7 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
             </ul>
           </Card>
 
-          <Card id="promote">
+          {app ? null : <Card id="promote">
             <CardHeader title="Promotion" description="Higher tiers appear first in search and in couples' dashboards." />
             {sp.tier && <p className="mx-5 mt-4 rounded-xl bg-sage-soft px-3 py-2 text-sm text-[#3f5238]">You&apos;re now on {LISTING_TIERS[sp.tier as ListingTier]?.name}.</p>}
             {sp.checkout === "success" && !sp.tier && (
@@ -157,7 +159,7 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
               {live && <p className="text-[11px] text-muted">Billed monthly through Stripe. Switching between paid tiers is prorated; cancel any time in the billing portal.</p>}
               {!demo && !live && <p className="text-[11px] text-muted">Online payments aren&apos;t available yet. Please check back soon.</p>}
             </div>
-          </Card>
+          </Card>}
         </div>
 
         <Card id="listing" className="mt-6 scroll-mt-6">
