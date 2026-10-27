@@ -26,7 +26,7 @@ async function signUp(page: import("@playwright/test").Page, email: string) {
 
 test("the site asks for early access instead of open signup", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("link", { name: /Request early access/ }).first()).toHaveAttribute("href", "/beta");
+  await expect(page.getByRole("link", { name: /Request early access/i }).first()).toHaveAttribute("href", "/beta");
   await expect(page.getByText("Start free")).toHaveCount(0);
   await page.goto("/pricing");
   await expect(page.getByText("$80").first()).toBeVisible();

@@ -62,7 +62,7 @@ export default async function StudioPage() {
                 <legend className="mb-1.5 text-xs font-medium uppercase tracking-[0.08em] text-muted">Start from</legend>
                 {TEMPLATES.map((t, i) => (
                   <label key={t.value} className="flex cursor-pointer gap-3 rounded-xl border border-line p-3 has-[:checked]:border-ink has-[:checked]:bg-cream/50">
-                    <input type="radio" name="template" value={t.value} defaultChecked={i === 0} className="mt-1 accent-[#2b2620]" />
+                    <input type="radio" name="template" value={t.value} defaultChecked={i === 0} className="mt-1 accent-[#3b2b20]" />
                     <span><span className="block text-sm font-medium">{t.label}</span><span className="text-xs text-muted">{t.description}</span></span>
                   </label>
                 ))}

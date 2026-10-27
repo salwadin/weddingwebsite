@@ -1,6 +1,7 @@
 // Small shadcn-style primitives, tuned to the Qubool palette.
 import { cn } from "@/lib/format";
 import Link from "next/link";
+import { Q_PATH, STAR_PATH } from "@/lib/brand";
 import type { ComponentProps, ReactNode } from "react";
 
 type Variant = "primary" | "secondary" | "ghost" | "outline" | "danger";
@@ -131,25 +132,29 @@ export function Empty({ title, children }: { title: string; children?: ReactNode
 }
 
 export function Checkbox({ className, ...p }: ComponentProps<"input">) {
-  return <input type="checkbox" className={cn("h-4 w-4 rounded border-line accent-[#2b2620]", className)} {...p} />;
+  return <input type="checkbox" className={cn("h-4 w-4 rounded border-line accent-[#3b2b20]", className)} {...p} />;
 }
 
 /** Small decorative crescent-arch mark used as the Qubool logo. */
 /** Two interlocking rings: Qubool's mark (also the favicon, app/icon.svg). */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" fill="none" aria-hidden className={cn("h-6 w-6", className)}>
-      <circle cx="12.5" cy="16" r="7.5" stroke="currentColor" strokeWidth="2" />
-      <circle cx="19.5" cy="16" r="7.5" stroke="#b08d57" strokeWidth="2" />
+    <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden className={cn("h-6 w-6", className)}>
+      <path d={Q_PATH} fillRule="evenodd" />
+      <path d={STAR_PATH} />
     </svg>
   );
 }
 
-export function Logo({ className }: { className?: string }) {
+/** The Qubool wordmark: Playfair Display, with the brand's star set inside the Q. */
+export function Logo({ className, tagline }: { className?: string; tagline?: boolean }) {
   return (
-    <span className={cn("inline-flex items-center gap-2 font-serif text-2xl tracking-tight", className)}>
-      <LogoMark className="h-[0.9em] w-[0.9em]" />
-      Qubool
+    <span className={cn("inline-flex flex-col font-serif text-2xl leading-none tracking-tight", className)}>
+      <span className="relative">
+        Qubool
+        <svg viewBox="12.7 11.2 6.6 6.6" fill="currentColor" aria-hidden className="absolute left-[0.28em] top-[0.47em] h-[0.18em] w-[0.18em]"><path d={STAR_PATH} /></svg>
+      </span>
+      {tagline && <span className="mt-[0.5em] self-end pr-[0.1em] font-sans text-[0.12em] font-normal uppercase tracking-[0.32em]">Plan · Celebrate · Together</span>}
     </span>
   );
 }
