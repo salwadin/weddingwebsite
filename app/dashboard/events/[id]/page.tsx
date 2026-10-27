@@ -74,7 +74,7 @@ export default async function EventEditor({ params, searchParams }: { params: Pr
               <div className="space-y-2 p-5">
                 {(Object.keys(VISIBILITY) as (keyof typeof VISIBILITY)[]).map((v) => (
                   <label key={v} className="flex cursor-pointer gap-3 rounded-xl border border-line p-3 has-[:checked]:border-ink has-[:checked]:bg-cream/50">
-                    <input type="radio" name="visibility" value={v} defaultChecked={e.visibility === v} className="mt-1 accent-[#2b2620]" />
+                    <input type="radio" name="visibility" value={v} defaultChecked={e.visibility === v} className="mt-1 accent-[#3b2b20]" />
                     <span><span className="block text-sm font-medium">{VISIBILITY[v].label}</span><span className="text-xs text-muted">{VISIBILITY[v].help}</span></span>
                   </label>
                 ))}

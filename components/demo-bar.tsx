@@ -16,14 +16,14 @@ export function DemoBar({ current }: { current: string }) {
   if (!demoEnabled()) return null;
   return (
     <div className="no-print fixed inset-x-0 bottom-3 z-50 flex justify-center px-3">
-      <details className="group max-w-full rounded-2xl border border-[#e7ddcd] bg-white/95 text-[#2b2620] shadow-[0_10px_40px_-12px_rgba(43,38,32,0.35)] backdrop-blur">
+      <details className="group max-w-full rounded-2xl border border-[#e6dbcf] bg-white/95 text-[#3b2b20] shadow-[0_10px_40px_-12px_rgba(43,38,32,0.35)] backdrop-blur">
         <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-2.5 text-xs">
-          <span className="rounded-full bg-[#2b2620] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#fbf8f2]">Demo</span>
+          <span className="rounded-full bg-[#3b2b20] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#f7f3ec]">Demo</span>
           <span className="truncate">Viewing as <b className="font-semibold">{current}</b></span>
-          <span className="text-[#b08d57] group-open:hidden">Switch ▴</span>
-          <span className="hidden text-[#b08d57] group-open:inline">Close ▾</span>
+          <span className="text-[#8a6a52] group-open:hidden">Switch ▴</span>
+          <span className="hidden text-[#8a6a52] group-open:inline">Close ▾</span>
         </summary>
-        <div className="grid gap-1 border-t border-[#e7ddcd] p-2 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid gap-1 border-t border-[#e6dbcf] p-2 sm:grid-cols-3 lg:grid-cols-6">
           {DEMO_MODES.map((m) => (
             <Link key={m.mode} href={`/demo/${m.mode}`} prefetch={false} className={cn("rounded-xl px-3 py-2 text-xs hover:bg-[#f4eee3]", current.startsWith(m.label) && "bg-[#f4eee3]")}>
               <div className="font-semibold">{m.label}</div>
@@ -31,9 +31,9 @@ export function DemoBar({ current }: { current: string }) {
             </Link>
           ))}
         </div>
-        <div className="flex items-center justify-between gap-3 border-t border-[#e7ddcd] px-4 py-2 text-[11px] text-[#7b7166]">
+        <div className="flex items-center justify-between gap-3 border-t border-[#e6dbcf] px-4 py-2 text-[11px] text-[#7b7166]">
           <span>Sample data. Payments, emails and domains are switched off, and the demo resets every night.</span>
-          <Link href="/demo/exit" prefetch={false} className="shrink-0 font-semibold text-[#2b2620] underline">Exit demo</Link>
+          <Link href="/demo/exit" prefetch={false} className="shrink-0 font-semibold text-[#3b2b20] underline">Exit demo</Link>
         </div>
       </details>
     </div>

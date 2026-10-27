@@ -1,6 +1,5 @@
-import { Check, Gift, MessageCircleHeart, Sparkles } from "lucide-react";
+import { Gift, MessageCircleHeart, Sparkles } from "lucide-react";
 import { submitBetaApplication } from "@/lib/actions/programs";
-import { SITE_PHOTOS } from "@/lib/photos";
 import { Card } from "@/components/ui";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { BetaApplicationForm } from "@/components/programs/forms";
@@ -20,43 +19,28 @@ export default function Beta() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <section className="jali-bg border-b border-line">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 pb-16 pt-6 lg:grid-cols-[1.15fr_1fr]">
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-gold">Qubool Beta</p>
-            <h1 className="mt-4 font-serif text-5xl leading-[1.02] sm:text-6xl">Plan with us before anyone else</h1>
-            <p className="mt-5 max-w-lg text-lg leading-relaxed text-muted">
-              We&apos;re opening Qubool to a small group of couples and professional planners, especially those with multi-day, multicultural, multi-event celebrations. Early access is complimentary.
-            </p>
-            <ul className="mt-6 space-y-2 text-sm">
-              {["Couples planning a wedding with more than one event", "Wedding and event planners managing several families", "Every culture, faith and celebration style"].map((t) => (
-                <li key={t} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-sage" />{t}</li>
-              ))}
-            </ul>
-            <a href="#apply" className="mt-7 inline-flex h-12 items-center rounded-full bg-ink px-7 text-[15px] font-medium text-ivory hover:bg-ink/90">Request early access</a>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={SITE_PHOTOS.toast} alt="Guests raising a toast at a wedding reception" className="mt-10 aspect-[3/4] w-full rounded-3xl object-cover" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={SITE_PHOTOS.malayCouple} alt="A couple in traditional wedding attire" className="arch-mask aspect-[3/4] w-full object-cover" />
-          </div>
-        </div>
+      <section className="mx-auto max-w-3xl px-6 pb-14 pt-10 text-center">
+        <p className="text-xs uppercase tracking-[0.4em] text-gold">Qubool Beta</p>
+        <h1 className="mt-5 font-serif text-5xl leading-[1.05] sm:text-6xl">Plan with us, <span className="italic">before anyone else.</span></h1>
+        <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted">
+          A small group of couples and planners, especially those with more than one event. Early access is free.
+        </p>
+        <a href="#apply" className="mt-8 inline-flex h-12 items-center rounded-full bg-ink px-8 text-xs font-medium uppercase tracking-[0.2em] text-ivory hover:bg-ink/90">Request Early Access</a>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="grid gap-10 md:grid-cols-3">
+      <section className="border-y border-line">
+        <div className="mx-auto grid max-w-5xl gap-10 px-6 py-14 text-center md:grid-cols-3">
           {PERKS.map(({ icon: Icon, title, body }) => (
             <div key={title}>
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-cream"><Icon className="h-5 w-5 text-gold" /></span>
-              <h2 className="mt-4 font-serif text-2xl">{title}</h2>
+              <Icon className="mx-auto h-7 w-7 text-ink" strokeWidth={1.2} />
+              <h2 className="mt-4 font-serif text-xl">{title}</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted">{body}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section id="apply" className="mx-auto max-w-3xl scroll-mt-6 px-6 pb-20">
+      <section id="apply" className="mx-auto max-w-3xl scroll-mt-6 px-6 py-16">
         <h2 className="font-serif text-4xl">Apply for early access</h2>
         <p className="mt-2 text-sm text-muted">It takes about two minutes. We invite people in small groups and will email you when it&apos;s your turn.</p>
         <Card className="mt-6 p-6 sm:p-8"><BetaApplicationForm action={submitBetaApplication} /></Card>

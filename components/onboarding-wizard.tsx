@@ -272,8 +272,8 @@ export function OnboardingWizard({ action, userName }: { action: (i: OnboardingI
             <h2 className="font-serif text-4xl">Add your guests</h2>
             <p className="mt-2 text-sm text-muted">One household per line. Optionally list who&apos;s in it after a colon. You can also skip this and import a CSV later.</p>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <Field label={`${names.partner1 || "First partner"}'s side`}><Textarea rows={8} value={brideText} onChange={(e) => setBrideText(e.target.value)} placeholder={"The Chen Family: Wei Chen, Lin Chen, Mia Chen (child)\nHina Khan"} /></Field>
-              <Field label={`${names.partner2 || "Second partner"}'s side`}><Textarea rows={8} value={groomText} onChange={(e) => setGroomText(e.target.value)} placeholder={"Dr. and Mrs. Okafor: Emeka Okafor, Ada Okafor\nSam Rivera: Sam Rivera, Guest (plus one)"} /></Field>
+              <Field label={`${names.partner1 || "First partner"}'s side`}><Textarea rows={8} value={brideText} onChange={(e) => setBrideText(e.target.value)} placeholder={"The Miller Family: Tom Miller, Anne Miller, Lily Miller (child)\nRose Bennett"} /></Field>
+              <Field label={`${names.partner2 || "Second partner"}'s side`}><Textarea rows={8} value={groomText} onChange={(e) => setGroomText(e.target.value)} placeholder={"Mr. and Mrs. Parker: David Parker, Kate Parker\nSam Lee: Sam Lee, Guest (plus one)"} /></Field>
             </div>
             <p className="mt-3 text-xs text-muted">{households.length} households · {households.reduce((n, h) => n + h.members.length, 0)} guests</p>
           </>

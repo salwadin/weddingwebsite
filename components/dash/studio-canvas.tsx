@@ -138,7 +138,7 @@ export function StudioCanvas({ boardId, kind, initialItems, editable, save, expe
             >
               {items.map((i) => (
                 <div key={i.id} onPointerDown={(e) => onPointerDown(e, i, "move")}
-                  className={cn("absolute touch-none", editable && "cursor-move", sel === i.id && "outline outline-2 outline-offset-2 outline-[#b08d57]")}
+                  className={cn("absolute touch-none", editable && "cursor-move", sel === i.id && "outline outline-2 outline-offset-2 outline-[#8a6a52]")}
                   style={{ left: i.x, top: i.y, width: i.w, height: i.h }}>
                   <ItemView i={i} />
                   {editable && sel === i.id && (

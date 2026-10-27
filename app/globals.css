@@ -1,20 +1,25 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ivory: #f8f1e7; /* warm cream: the page background on Qubool's own pages and dashboard */
-  --color-cream: #f4eee3;
-  --color-sand: #e9dfcf;
-  --color-ink: #2b2620;
-  --color-muted: #7b7166;
-  --color-gold: #b08d57;
-  --color-gold-soft: #e8d9bc;
-  --color-sage: #8a9a82;
-  --color-sage-soft: #e3e8de;
-  --color-rose: #c48b86;
-  --color-rose-soft: #f3e1dd;
-  --color-line: #e7ddcd;
-  --font-serif: var(--font-instrument), "Instrument Serif", Georgia, serif;
-  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  /* Qubool brand kit: ivory, blush, taupe, olive and brown. */
+  --color-ivory: #f7f3ec; /* the page background on Qubool's own pages and dashboard */
+  --color-cream: #efe8de;
+  --color-sand: #e7dccf;
+  --color-blush: #dcc1b4;
+  --color-taupe: #c8b6a7;
+  --color-olive: #454b38;
+  --color-brown: #604a38;
+  --color-ink: #3b2b20; /* deep brown, the logo's color: text and dark surfaces */
+  --color-muted: #7d6d61;
+  --color-gold: #8a6a52; /* accent: a lighter brown for eyebrows and italics */
+  --color-gold-soft: #e6d3c8;
+  --color-sage: #5b6348;
+  --color-sage-soft: #e3e4d7;
+  --color-rose: #a9786b;
+  --color-rose-soft: #f2e4dc;
+  --color-line: #e6dbcf;
+  --font-serif: var(--font-playfair-v), "Playfair Display", Georgia, serif;
+  --font-sans: var(--font-montserrat), "Montserrat", ui-sans-serif, system-ui, sans-serif;
   /* Couples' wedding sites keep their own heading choice (Website → Theme); "classic" is Cormorant. */
   --font-classic: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
   --font-arabic: var(--font-amiri), "Amiri", serif;
