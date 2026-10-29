@@ -21,8 +21,8 @@ export const PLANS: Record<Plan, {
   plus: {
     name: "Plus", price: 80, billing: "one-time, per wedding",
     tagline: "For multi-day weddings with big families.",
-    maxEvents: 8, maxGuests: 1000,
-    highlights: ["Everything in Essentials", "Up to 8 events and 1,000 guests", "Invitation designer with QR codes", "Family collaborators & roles", "Outfit manager", "CSV import", "Text invitations & reminders (500 a month)"],
+    maxEvents: 4, maxGuests: 750,
+    highlights: ["Everything in Essentials", "Up to 4 events and 750 guests", "Invitation designer with QR codes", "Family collaborators & roles", "Outfit manager", "CSV import", "Text invitations & reminders (500 a month)"],
   },
   signature: {
     name: "Signature", price: 150, billing: "one-time, per wedding",
