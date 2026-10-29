@@ -72,12 +72,12 @@ export default function Landing() {
             <Heading title="Try the live demo" sub="A sample wedding. No sign-up needed." />
             <div className="mt-12 grid gap-4 sm:grid-cols-3">
               {DEMO.map(({ mode, title, body }) => (
-                <Link key={mode} href={`/demo/${mode}`} prefetch={false}
+                <a key={mode} href={`/demo/${mode}`}
                   className="group rounded-2xl border border-line bg-white p-6 text-center transition hover:border-ink/30">
                   <h3 className="font-serif text-2xl">{title}</h3>
                   <p className="mt-1 text-[15px] text-ink/70">{body}</p>
                   <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium">Open <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" /></span>
-                </Link>
+                </a>
               ))}
             </div>
           </section>

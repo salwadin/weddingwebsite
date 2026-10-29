@@ -19,8 +19,12 @@ export function Button({ variant = "primary", size = "md", className, ...p }: Co
   return <button className={cn(base, variants[variant], sizes[size], className)} {...p} />;
 }
 
-export function ButtonLink({ variant = "primary", size = "md", className, ...p }: ComponentProps<typeof Link> & { variant?: Variant; size?: keyof typeof sizes }) {
-  return <Link className={cn(base, variants[variant], sizes[size], className)} {...p} />;
+export function ButtonLink({ variant = "primary", size = "md", className, reload, ...p }: ComponentProps<typeof Link> & { variant?: Variant; size?: keyof typeof sizes; reload?: boolean }) {
+  const cls = cn(base, variants[variant], sizes[size], className);
+  // reload: a full page load, for routes that set cookies and redirect (the /demo/* links),
+  // which an in-app navigation can leave showing the old, cached page.
+  if (reload) return <a className={cls} href={String(p.href)}>{p.children}</a>;
+  return <Link className={cls} {...p} />;
 }
 
 export function Card({ className, ...p }: ComponentProps<"div">) {

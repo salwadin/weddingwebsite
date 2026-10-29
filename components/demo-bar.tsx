@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { cn } from "@/lib/format";
 import { demoEnabled } from "@/lib/supabase/env";
 
@@ -25,15 +24,15 @@ export function DemoBar({ current }: { current: string }) {
         </summary>
         <div className="grid gap-1 border-t border-[#e6dbcf] p-2 sm:grid-cols-3 lg:grid-cols-6">
           {DEMO_MODES.map((m) => (
-            <Link key={m.mode} href={`/demo/${m.mode}`} prefetch={false} className={cn("rounded-xl px-3 py-2 text-xs hover:bg-[#f4eee3]", current.startsWith(m.label) && "bg-[#f4eee3]")}>
+            <a key={m.mode} href={`/demo/${m.mode}`} className={cn("rounded-xl px-3 py-2 text-xs hover:bg-[#f4eee3]", current.startsWith(m.label) && "bg-[#f4eee3]")}>
               <div className="font-semibold">{m.label}</div>
               <div className="text-[11px] text-[#7b7166]">{m.sub}</div>
-            </Link>
+            </a>
           ))}
         </div>
         <div className="flex items-center justify-between gap-3 border-t border-[#e6dbcf] px-4 py-2 text-[11px] text-[#7b7166]">
           <span>Sample data. Payments, emails and domains are switched off, and the demo resets every night.</span>
-          <Link href="/demo/exit" prefetch={false} className="shrink-0 font-semibold text-[#3b2b20] underline">Exit demo</Link>
+          <a href="/demo/exit" className="shrink-0 font-semibold text-[#3b2b20] underline">Exit demo</a>
         </div>
       </details>
     </div>
