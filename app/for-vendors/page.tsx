@@ -20,7 +20,7 @@ export default function ForVendors() {
             <p className="mt-5 max-w-lg text-lg leading-relaxed text-muted">
               Couples on Qubool plan multi-day, multi-event celebrations: welcome dinners, henna nights, ceremonies, receptions and more. Show them you know their traditions, from halal menus and tea ceremonies to chuppahs, sofreh spreads and female teams.
             </p>
-            <Link href="/founding-vendors" className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-gold/40 bg-gold-soft/40 p-4 text-sm hover:bg-gold-soft/60">
+            <Link href="/beta?as=vendor#apply" className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-gold/40 bg-gold-soft/40 p-4 text-sm hover:bg-gold-soft/60">
               <span><b className="block font-serif text-xl font-normal">The Founding 50</b>The first 50 approved vendors get 12 months of Featured listing free.</span>
               <span className="shrink-0 font-medium underline">Apply</span>
             </Link>
@@ -32,7 +32,7 @@ export default function ForVendors() {
           </div>
           <Card className="p-6">
             <h2 className="font-serif text-3xl">Create your free listing</h2>
-            <p className="mb-5 mt-1 text-sm text-muted">For approved Founding Vendors during the beta: use the email you applied with. Not approved yet? <a href="/founding-vendors#apply" className="underline">Apply here</a>.</p>
+            <p className="mb-5 mt-1 text-sm text-muted">For approved Founding Vendors during the beta: use the email you applied with. Not approved yet? <a href="/beta?as=vendor#apply" className="underline">Apply here</a>.</p>
             <VendorSignupForm action={vendorSignup} />
           </Card>
         </div>

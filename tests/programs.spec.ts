@@ -37,7 +37,9 @@ test("a vendor applies to the Founding 50; a second application from the same em
     portfolio_urls: ["https://saffronthyme.example.org/weddings"], traditions: ["arab"], status: "pending",
   });
 
-  await page.goto("/founding-vendors");
+  // Vendors can also apply from Request Access by choosing "A vendor".
+  await page.goto("/beta");
+  await form.getByRole("button", { name: /A vendor/ }).click();
   await form.getByLabel("Business name").fill("Saffron & Thyme Catering");
   await form.getByLabel("Category").selectOption("Catering");
   await form.getByLabel("City").fill("Houston");
