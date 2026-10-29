@@ -16,19 +16,19 @@ export const PLANS: Record<Plan, {
     name: "Essentials", price: 0, billing: "free forever",
     tagline: "A beautiful website and RSVPs for smaller celebrations.",
     maxEvents: 2, maxGuests: 150,
-    highlights: ["Wedding website with private events", "Up to 2 events", "Up to 150 guests", "Household RSVPs", "Checklist & budget", "Browse & message vendors"],
+    highlights: ["Wedding website with private events", "Up to 2 events", "Up to 150 guests", "Checklist & budget", "Browse & message vendors"],
   },
   plus: {
     name: "Plus", price: 80, billing: "one-time, per wedding",
     tagline: "For multi-day weddings with big families.",
     maxEvents: 4, maxGuests: 750,
-    highlights: ["Everything in Essentials", "Up to 4 events and 750 guests", "Invitation designer with QR codes", "Family collaborators & roles", "Outfit manager", "CSV import", "Text invitations & reminders (500 a month)"],
+    highlights: ["Everything in Essentials", "Up to 4 events and 750 guests", "Invitation designer with QR codes", "Family collaborators & roles", "Outfit manager", "CSV import", "Text invitations & reminders"],
   },
   signature: {
     name: "Signature", price: 150, billing: "one-time, per wedding",
     tagline: "The full planning studio, for every layer of the celebration.",
     maxEvents: Infinity, maxGuests: Infinity,
-    highlights: ["Everything in Plus", "Unlimited events and guests", "Design studio: moodboards & floor plans", "Your own domain name", "No Qubool branding on your site", "2,000 texts a month", "Priority support"],
+    highlights: ["Everything in Plus", "Unlimited events and guests", "Design studio: moodboards & floor plans", "Your own domain name", "No Qubool branding on your site", "Priority support"],
   },
 };
 
@@ -59,9 +59,6 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   remove_branding: "Removing Qubool branding",
   sms: "Texting guests",
 };
-
-/** Texts a wedding may send per 30 days. Only bought plans text (never a free trial): see lib/sms/deliver.ts. */
-export const SMS_PER_MONTH: Record<Plan, number> = { free: 0, plus: 500, signature: 2000 };
 
 /** The plan in force today: a running trial unlocks Signature. */
 export function effectivePlan(w: Pick<Wedding, "plan" | "trialEndsAt">): Plan {

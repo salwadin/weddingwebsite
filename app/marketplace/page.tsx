@@ -63,7 +63,7 @@ export default async function Marketplace({ searchParams }: { searchParams: Prom
 
       <main className="mx-auto max-w-6xl px-6 py-10">
         {demo && (
-          <p className="mb-6 rounded-2xl bg-gold-soft/50 px-4 py-3 text-sm">You&apos;re exploring the demo, so sample vendors are shown alongside real ones. <Link href="/demo/exit" className="underline">Exit the demo</Link> to see the live marketplace.</p>
+          <p className="mb-6 rounded-2xl bg-gold-soft/50 px-4 py-3 text-sm">You&apos;re exploring the demo, so sample vendors are shown alongside real ones. <a href="/demo/exit" className="underline">Exit the demo</a> to see the live marketplace.</p>
         )}
         {all.length === 0 && (
           <section className="mb-12 rounded-3xl border border-line bg-white p-8 text-center sm:p-12">
@@ -72,7 +72,7 @@ export default async function Marketplace({ searchParams }: { searchParams: Prom
             <p className="mx-auto mt-3 max-w-xl text-sm text-muted">We&apos;re inviting caterers, photographers, henna artists, officiants, venues and designers who know multicultural, multi-day weddings. The first 50 approved vendors get 12 months of Featured listing free.</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <ButtonLink href="/founding-vendors">Become a Founding Vendor</ButtonLink>
-              <ButtonLink href="/demo/marketplace" variant="outline" prefetch={false}>See a sample marketplace</ButtonLink>
+              <ButtonLink href="/demo/marketplace" variant="outline" reload>See a sample marketplace</ButtonLink>
             </div>
           </section>
         )}

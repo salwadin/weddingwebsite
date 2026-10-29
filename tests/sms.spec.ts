@@ -62,7 +62,7 @@ test("a paid wedding texts each household its own invitation link", async ({ pag
 
   const { data: row } = await admin.from("outbox").select("status,provider_id,recipient").eq("household_id", hh).eq("channel", "sms").single();
   expect(row).toEqual({ status: "sent", provider_id: msg!.sid, recipient: "+12142020101" });
-  await expect(page.getByText(/Texts: \d+ of 2,000 used/)).toBeVisible();
+  await expect(page.getByText(/\d+ texts sent in the last 30 days/)).toBeVisible();
 });
 
 test("without confirming guests agreed to texts, nothing is sent", async ({ page }) => {
@@ -101,19 +101,6 @@ test("a guest who replied STOP isn't texted, and the outbox says why", async ({ 
   expect(row!.status).toBe("failed");
   expect(row!.error).toMatch(/replied STOP/);
   await expect(page.getByText(/replied STOP to Qubool texts/).first()).toBeVisible();
-});
-
-test("the monthly allowance stops texts once it's used up", async ({ page }) => {
-  await admin.from("weddings").update({ plan: "plus" }).eq("id", DEMO_WEDDING_ID);
-  const now = new Date().toISOString();
-  await admin.from("outbox").insert(Array.from({ length: 500 }, () => ({
-    wedding_id: DEMO_WEDDING_ID, channel: "sms", recipient: "+12142020102", kind: "invitation", subject: "x", body: "x", status: "sent", sent_at: now,
-  })));
-  await admin.from("households").update({ phone: "(214) 202-0101" }).eq("id", hh);
-  const { data: row } = await admin.from("outbox").insert({ wedding_id: DEMO_WEDDING_ID, channel: "sms", recipient: "+12142020101", household_id: hh, kind: "reminder", subject: "x", body: "x" }).select("id").single();
-  expect((await cron(page)).ok()).toBe(true);
-  const { data: after } = await admin.from("outbox").select("status,error").eq("id", row!.id).single();
-  expect(after).toEqual({ status: "failed", error: "Monthly text allowance reached (500 texts in 30 days)." });
 });
 
 test("Twilio's signed delivery reports update the outbox; unsigned ones are refused", async ({ page, baseURL }) => {

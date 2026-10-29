@@ -20,7 +20,7 @@ export default function Terms() {
       </Section>
 
       <Section title="Plans and payments">
-        <p>Essentials is free. Plus and Signature are one-time purchases for one wedding; vendor Featured and Spotlight listings are monthly subscriptions you can cancel at any time. Prices are shown on our <Link href="/pricing">pricing page</Link>, and payments are processed by Stripe. Plan allowances, such as monthly text limits, are listed with each plan. If something isn&apos;t right with a purchase, email us and we&apos;ll make it right.</p>
+        <p>Essentials is free. Plus and Signature are one-time purchases for one wedding; vendor Featured and Spotlight listings are monthly subscriptions you can cancel at any time. Prices are shown on our <Link href="/pricing">pricing page</Link>, and payments are processed by Stripe. What each plan includes is listed on the pricing page. If something isn&apos;t right with a purchase, email us and we&apos;ll make it right.</p>
       </Section>
 
       <Section title="Vendors">

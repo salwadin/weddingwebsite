@@ -10,7 +10,7 @@ import { InvitationPreview } from "@/components/dash/invitation-preview";
 import { artUrl } from "@/lib/invitation-art";
 import { PhotoUpload } from "@/components/photo-upload";
 import { emailEnabled } from "@/lib/email/resend";
-import { hasFeature, SMS_PER_MONTH } from "@/lib/plans";
+import { hasFeature } from "@/lib/plans";
 import { normalizePhone } from "@/lib/sms/rules";
 import { smsEnabled } from "@/lib/sms/twilio";
 
@@ -126,7 +126,7 @@ export default async function InvitationsPage({ searchParams }: { searchParams: 
               {canEdit && texting && (
                 <p className="text-xs text-muted">
                   {canText
-                    ? <>Texts: {textsUsed ?? 0} of {SMS_PER_MONTH[w.plan].toLocaleString()} used in the last 30 days. {textable} of {invited.length} invited households have a US or Canadian mobile number. Every text ends with &ldquo;Reply STOP to opt out&rdquo;.</>
+                    ? <>{(textsUsed ?? 0).toLocaleString()} texts sent in the last 30 days. {textable} of {invited.length} invited households have a US or Canadian mobile number. Every text ends with &ldquo;Reply STOP to opt out&rdquo;.</>
                     : <>Texting guests is included once you buy Plus or Signature (it isn&apos;t part of the free trial).</>}
                 </p>
               )}

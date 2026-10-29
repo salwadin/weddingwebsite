@@ -2,7 +2,7 @@ import "server-only";
 import { type Supabase } from "../supabase/server";
 import { deriveToken } from "../tokens";
 import { DEMO_WEDDING_ID } from "../seed";
-import { SMS_PER_MONTH, hasFeature } from "../plans";
+import { hasFeature } from "../plans";
 import type { Plan } from "../types";
 import { isDemoPhone, normalizePhone, smsText, SMS_KINDS, type SmsKind } from "./rules";
 import { sendSms, smsEnabled } from "./twilio";
@@ -13,12 +13,11 @@ import { sendSms, smsEnabled } from "./twilio";
 // the household's phone on file, its current link and the wedding's names. An
 // organizer inserting outbox rows directly can't text arbitrary words to arbitrary
 // numbers, and the checks that cost money live here too: only weddings on a bought
-// plan (never a free trial) may text, and only up to their monthly allowance.
+// plan (never a free trial) may text. There is no monthly cap.
 
 type OutboxRow = { id: string; wedding_id: string | null; recipient: string; household_id: string | null; kind: string; event_id: string | null };
 
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 /** Twilio accepts and queues requests quickly; a few at a time keeps a big send inside one request. */
 const CONCURRENCY = 8;
 
@@ -66,21 +65,9 @@ export async function deliverSmsPending(admin: Supabase, opts: { origin: string;
     else ready.push({ row, ...b });
   }
 
-  // Allowances: what each wedding may still send in the last 30 days, oldest rows first.
-  const used = await sentLast30Days(admin, [...new Set(ready.map((r) => r.row.wedding_id!))]);
-  const sendable: typeof ready = [];
-  for (const r of ready) {
-    const w = ctx.weddings.get(r.row.wedding_id!)!;
-    const cap = SMS_PER_MONTH[w.plan];
-    const n = used.get(r.row.wedding_id!) ?? 0;
-    if (n >= cap) { await fail([r.row.id], `Monthly text allowance reached (${cap} texts in 30 days).`); continue; }
-    used.set(r.row.wedding_id!, n + 1);
-    sendable.push(r);
-  }
-
   const callback = new URL("/api/twilio/status", origin).toString();
-  for (let i = 0; i < sendable.length; i += CONCURRENCY) {
-    await Promise.all(sendable.slice(i, i + CONCURRENCY).map(async ({ row, to, body }) => {
+  for (let i = 0; i < ready.length; i += CONCURRENCY) {
+    await Promise.all(ready.slice(i, i + CONCURRENCY).map(async ({ row, to, body }) => {
       const res = await sendSms(to, body, callback);
       if (res.ok) {
         await admin.from("outbox").update({ status: "sent", sent_at: new Date().toISOString(), provider_id: res.sid, error: null }).eq("id", row.id);
@@ -95,17 +82,6 @@ export async function deliverSmsPending(admin: Supabase, opts: { origin: string;
   }
   if (result.retry) console.error(`SMS: ${result.retry} texts will be retried`);
   return result;
-}
-
-async function sentLast30Days(admin: Supabase, weddingIds: string[]) {
-  const counts = new Map<string, number>();
-  await Promise.all(weddingIds.map(async (id) => {
-    const { count } = await admin.from("outbox").select("id", { count: "exact", head: true })
-      .eq("wedding_id", id).eq("channel", "sms").in("status", ["sent", "delivered"])
-      .gte("sent_at", new Date(Date.now() - MONTH_MS).toISOString());
-    counts.set(id, count ?? 0);
-  }));
-  return counts;
 }
 
 interface Context {
