@@ -29,45 +29,6 @@ const DEMO = [
   { mode: "vendor", icon: Store, title: "Vendor portal", body: "How vendors manage their listing and inquiries." },
 ];
 
-/**
- * The hero's right side: a few cards from the product on a soft gradient, showing what
- * Qubool does (a guest's own invitation, replies coming in) instead of a stock photo.
- */
-function HeroPreview() {
-  const shadow = "shadow-[0_24px_60px_-28px_rgba(59,43,32,0.3)]";
-  return (
-    <div className="relative aspect-[3/5] w-full overflow-hidden rounded-[28px] bg-ivory sm:aspect-[4/3] lg:aspect-square" aria-label="A preview of Qubool: a guest's invitation and RSVP replies" role="img">
-      <div aria-hidden className="absolute inset-0 bg-[radial-gradient(60%_50%_at_20%_15%,#dcc1b4_0%,transparent_70%),radial-gradient(55%_45%_at_85%_80%,#c8b6a7_0%,transparent_70%)]" />
-
-      {/* A guest's personal invitation */}
-      <div className={`absolute left-[12%] right-[10%] top-[9%] rounded-2xl bg-white p-6 sm:p-7 ${shadow}`}>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted">You&apos;re invited</p>
-        <p className="mt-3 text-sm text-muted">Dear Miller family,</p>
-        <p className="mt-1 font-serif text-[2rem] leading-none tracking-tight sm:text-4xl">Sara &amp; Adam</p>
-        <ul className="mt-5 space-y-2.5 text-sm">
-          {[["Welcome dinner", "Fri, June 11"], ["Ceremony", "Sat, June 12"], ["Reception", "Sat, June 12"]].map(([e, d]) => (
-            <li key={e} className="flex items-center justify-between gap-3 border-t border-line/70 pt-2.5"><span>{e}</span><span className="text-xs text-muted">{d}</span></li>
-          ))}
-        </ul>
-        <span className="mt-5 inline-flex h-9 items-center rounded-full bg-ink px-5 text-[11px] font-medium uppercase tracking-[0.2em] text-ivory">RSVP</span>
-      </div>
-
-      {/* Replies coming in */}
-      <div className={`absolute bottom-[7%] left-[5%] w-[52%] rounded-2xl bg-white p-4 ${shadow}`}>
-        <p className="text-xs text-muted">Replies</p>
-        <p className="mt-1 font-serif text-3xl tracking-tight">128<span className="text-base text-muted"> of 160</span></p>
-        <div className="mt-2.5 h-1.5 rounded-full bg-cream"><div className="h-1.5 w-[80%] rounded-full bg-sage" /></div>
-      </div>
-
-      {/* A delivered note */}
-      <div className={`absolute bottom-[12%] right-[6%] flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-xs ${shadow}`}>
-        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sage text-white"><Check className="h-2.5 w-2.5" strokeWidth={3} /></span>
-        The Millers replied
-      </div>
-    </div>
-  );
-}
-
 export default function Landing() {
   return (
     <div className="min-h-screen bg-ivory">
@@ -76,33 +37,25 @@ export default function Landing() {
         <div aria-hidden className="absolute inset-0 bg-[radial-gradient(50%_60%_at_10%_0%,#ead6cb_0%,transparent_70%),radial-gradient(45%_55%_at_95%_100%,#e2d7cb_0%,transparent_70%)]" />
         <div className="relative">
           <SiteHeader />
-          <section className="mx-auto grid max-w-6xl items-center gap-10 px-6 pb-14 pt-2 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
-            <div className="fade-in min-w-0">
-              <h1 className="font-serif text-[3.4rem] leading-[1] tracking-tight min-[400px]:text-6xl sm:text-7xl xl:text-[5.25rem]">
-                One Wedding.<br /><span className="italic text-brown">Every Celebration.</span>
+          <section className="mx-auto max-w-6xl px-6 pb-14 pt-4">
+            <div className="fade-in min-w-0 max-w-3xl">
+              <p className="text-xs uppercase tracking-[0.4em] text-gold">One Wedding. Every Celebration.</p>
+              <h1 className="mt-4 font-serif text-[3.2rem] leading-[1.02] tracking-tight min-[400px]:text-6xl sm:text-7xl">
+                Every guest, <span className="italic text-brown">their own invitation.</span>
               </h1>
-              <p className="mt-6 text-xl text-ink/80">A personal invitation for every guest.</p>
-              <p className="mt-2 text-xs uppercase tracking-[0.4em] text-gold">Plan · Celebrate · Together</p>
+              <p className="mt-5 text-xl text-ink/80">Choose who&apos;s invited to each event. They see only theirs, and RSVP in a tap.</p>
               <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <ButtonLink href="/beta" size="lg">Request Early Access <ArrowRight className="h-4 w-4" /></ButtonLink>
                 {demoEnabled() && <Link href="#demo" className="text-[15px] font-medium underline-offset-4 hover:underline">Try the demo</Link>}
+                <span className="flex items-center gap-1.5 text-sm text-ink/70"><Check className="h-4 w-4 text-sage" /> Free during the beta</span>
               </div>
-              <p className="mt-4 flex items-center gap-1.5 text-sm text-ink/70"><Check className="h-4 w-4 text-sage" /> Free during the beta</p>
             </div>
-            <HeroPreview />
+            <div className="mt-10 min-w-0"><TwoViews /></div>
           </section>
         </div>
       </div>
 
       <main>
-        <section className="mx-auto max-w-6xl px-6 py-14">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <h2 className="font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Every guest, <span className="italic text-brown">their own invitation.</span></h2>
-            <p className="text-lg text-ink/70">Choose who&apos;s invited. They see only their events.</p>
-          </div>
-          <div className="mt-8 min-w-0"><TwoViews /></div>
-        </section>
-
         <section className="bg-[#efe6dc]">
           <div className="mx-auto grid max-w-6xl gap-3 px-6 py-14 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, title, body }) => (

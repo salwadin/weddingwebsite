@@ -1,7 +1,8 @@
-import { LayoutGrid, Shirt } from "lucide-react";
+import { ListChecks, LayoutGrid, Shirt } from "lucide-react";
+import { ChecklistMock } from "./checklist-mock";
 
 // The landing page's planning highlight: small, static pictures of the Design Studio
-// (a moodboard and a floor plan) and the Outfits planner, as they look in the dashboard.
+// (a moodboard and a floor plan), the Outfits planner and the Checklist, as they look in the dashboard.
 
 const SWATCHES = ["#f7f3ec", "#dcc1b4", "#c8b6a7", "#454b38", "#604a38"];
 const TABLES = [[18, 30], [42, 30], [66, 30], [18, 68], [42, 68], [66, 68]];
@@ -18,10 +19,10 @@ export function PlanningHighlight() {
     <section className="mx-auto max-w-6xl px-6 py-16">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h2 className="font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Planning, <span className="italic text-brown">beautifully.</span></h2>
-        <p className="text-lg text-ink/70">The look of every event, and every look.</p>
+        <p className="text-lg text-ink/70">Every task, every look, every room.</p>
       </div>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
+      <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <div className={card}>
           <div className="grid h-56 grid-cols-[1.1fr_1fr] gap-3 bg-cream p-4" aria-hidden>
             {/* Moodboard */}
@@ -65,6 +66,14 @@ export function PlanningHighlight() {
             <p className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-gold"><Shirt className="h-4 w-4" />Outfits</p>
             <h3 className="mt-2 font-serif text-2xl">Every look, every event</h3>
             <p className="mt-1 text-[15px] text-ink/70">Who&apos;s wearing what, fittings, deadlines and payments, in one list.</p>
+          </div>
+        </div>
+        <div className={card}>
+          <div className="h-56 bg-cream p-4"><ChecklistMock /></div>
+          <div className="p-6">
+            <p className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-gold"><ListChecks className="h-4 w-4" />Checklist</p>
+            <h3 className="mt-2 font-serif text-2xl">Tasks, split by side</h3>
+            <p className="mt-1 text-[15px] text-ink/70">Give each family its own tasks, keep shared ones in common. Everyone sees what&apos;s theirs.</p>
           </div>
         </div>
       </div>
