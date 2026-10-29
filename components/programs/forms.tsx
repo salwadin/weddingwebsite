@@ -65,25 +65,13 @@ export function VendorApplicationForm({ action }: { action: Action }) {
   );
 }
 
-export function BetaApplicationForm({ action }: { action: Action }) {
+function BetaApplicationForm({ action, kind }: { action: Action; kind: "couple" | "planner" }) {
   const [state, formAction, pending] = useActionState(action, null);
-  const [kind, setKind] = useState<"couple" | "planner">("couple");
   if (state?.ok) return <Done message={state.message} />;
   return (
     <form action={formAction} className="relative grid gap-4 sm:grid-cols-2">
       <Honeypot />
       <input type="hidden" name="kind" value={kind} />
-      <div className="sm:col-span-2">
-        <p className="mb-1.5 text-xs font-medium uppercase tracking-[0.08em] text-muted">I&apos;m applying as</p>
-        <div className="grid grid-cols-2 gap-2">
-          {([["couple", "A couple", "Planning our own wedding"], ["planner", "A planner", "Wedding or event professional"]] as const).map(([v, t, sub]) => (
-            <button key={v} type="button" onClick={() => setKind(v)} aria-pressed={kind === v}
-              className={cn("rounded-2xl border p-4 text-left transition", kind === v ? "border-ink bg-cream/60" : "border-line bg-white hover:border-gold")}>
-              <span className="block font-serif text-xl">{t}</span><span className="text-xs text-muted">{sub}</span>
-            </button>
-          ))}
-        </div>
-      </div>
       <Field label="Your name"><Input name="name" required autoComplete="name" /></Field>
       <Field label="Email"><Input name="email" type="email" required autoComplete="email" /></Field>
       {kind === "couple"
@@ -105,3 +93,29 @@ export function BetaApplicationForm({ action }: { action: Action }) {
   );
 }
 
+
+export type ApplicantKind = "couple" | "planner" | "vendor";
+const KINDS = [["couple", "A couple", "Planning our own wedding"], ["planner", "A planner", "Wedding or event professional"], ["vendor", "A vendor", "Caterer, photographer, venue…"]] as const;
+
+/** The one Request Access form: couples and planners join the beta, vendors apply to the Founding 50. */
+export function RequestAccessForm({ betaAction, vendorAction, initial = "couple" }: { betaAction: Action; vendorAction: Action; initial?: ApplicantKind }) {
+  const [kind, setKind] = useState<ApplicantKind>(initial);
+  return (
+    <div className="space-y-5">
+      <div>
+        <p className="mb-1.5 text-xs font-medium uppercase tracking-[0.08em] text-muted">I&apos;m applying as</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {KINDS.map(([v, t, sub]) => (
+            <button key={v} type="button" onClick={() => setKind(v)} aria-pressed={kind === v}
+              className={cn("rounded-2xl border p-4 text-left transition", kind === v ? "border-ink bg-cream/60" : "border-line bg-white hover:border-gold")}>
+              <span className="block font-serif text-xl">{t}</span><span className="text-xs text-muted">{sub}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      {kind === "vendor"
+        ? <><p className="text-sm text-muted">The first 50 approved vendors get 12 months of Featured listing free.</p><VendorApplicationForm action={vendorAction} /></>
+        : <BetaApplicationForm action={betaAction} kind={kind} />}
+    </div>
+  );
+}

@@ -9,7 +9,6 @@ export function SiteHeader() {
       <nav className="flex items-center gap-1 sm:gap-2">
         <Link href="/marketplace" className="hidden rounded-full px-3 py-2 text-sm font-medium text-ink/80 hover:bg-cream lg:block">Find Vendors</Link>
         <Link href="/pricing" className="hidden rounded-full px-3 py-2 text-sm font-medium text-ink/80 hover:bg-cream sm:block">Pricing</Link>
-        <Link href="/founding-vendors" className="hidden rounded-full px-3 py-2 text-sm font-medium text-ink/80 hover:bg-cream md:block">Join as a Vendor</Link>
         <ButtonLink href="/login" variant="ghost" size="sm">Sign In</ButtonLink>
         <ButtonLink href="/beta" size="sm">Request Access</ButtonLink>
       </nav>
@@ -30,7 +29,7 @@ export function SiteFooter() {
           <Link href="/beta" className="inline-flex h-12 items-center rounded-full bg-ivory px-7 text-xs font-medium uppercase tracking-[0.2em] text-ink transition hover:bg-blush">Request Early Access</Link>
         </div>
         <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-ivory/15 pt-6 text-sm text-ivory/60">
-          <p>Already invited? <Link href="/signup" className="underline underline-offset-2 hover:text-ivory">Create your account</Link> · A vendor? <Link href="/founding-vendors" className="underline underline-offset-2 hover:text-ivory">Join the Founding 50</Link></p>
+          <p>Already invited? <Link href="/signup" className="underline underline-offset-2 hover:text-ivory">Create your account</Link></p>
           <nav className="flex flex-wrap gap-x-5 gap-y-2">
             <Link href="/pricing" className="hover:text-ivory">Pricing</Link>
             <Link href="/marketplace" className="hover:text-ivory">Find Vendors</Link>

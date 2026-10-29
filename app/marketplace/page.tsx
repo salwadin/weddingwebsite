@@ -71,7 +71,7 @@ export default async function Marketplace({ searchParams }: { searchParams: Prom
             <h2 className="mx-auto mt-3 max-w-2xl font-serif text-4xl">The marketplace is opening. Be one of the first vendors couples find.</h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-muted">We&apos;re inviting caterers, photographers, henna artists, officiants, venues and designers who know multicultural, multi-day weddings. The first 50 approved vendors get 12 months of Featured listing free.</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <ButtonLink href="/founding-vendors">Become a Founding Vendor</ButtonLink>
+              <ButtonLink href="/beta?as=vendor#apply">Request Access</ButtonLink>
               <ButtonLink href="/demo/marketplace" variant="outline" reload>See a sample marketplace</ButtonLink>
             </div>
           </section>
