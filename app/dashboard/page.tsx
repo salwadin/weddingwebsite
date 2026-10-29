@@ -7,6 +7,7 @@ import { PLANS, trialDaysLeft } from "@/lib/plans";
 import { longDate, money, time12, VISIBILITY } from "@/lib/format";
 import { Badge, ButtonLink, Card, CardHeader, PageHeader, Progress, Stat } from "@/components/ui";
 import { inNativeApp } from "@/lib/native";
+import { PushPrompt } from "@/components/push-prompt";
 
 export default async function Overview({ searchParams }: { searchParams: Promise<{ denied?: string; welcome?: string }> }) {
   const { denied, welcome } = await searchParams;
@@ -33,6 +34,9 @@ export default async function Overview({ searchParams }: { searchParams: Promise
           <span>You&apos;re trying every feature free for {trialDaysLeft(w)} more days. After that you&apos;ll be on {PLANS[w.plan].name}.</span>
           {!app && <Link href="/dashboard/billing" className="font-medium underline">Compare plans</Link>}
         </p>
+      )}
+      {app && can(scope, "rsvps") && scope.role !== "viewer" && (
+        <PushPrompt title="Know the moment guests RSVP" text="Get a notification on this phone whenever a household answers its invitation." />
       )}
       {welcome && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-3 text-sm text-[#3f5238]">Mubarak! Your wedding is set up. Next: add details to each event, then send personal invitation links from the Guest List.</p>}
       {denied && <p className="mb-4 rounded-xl bg-rose-soft px-4 py-2.5 text-sm text-[#8f3f39]">Your role doesn&apos;t include access to {denied}. Ask a wedding administrator if you need it.</p>}

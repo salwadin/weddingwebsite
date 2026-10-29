@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import { after } from "next/server";
 import { GUEST_COOKIE, grantSiteAccess, guestToken, siteUrl } from "../auth";
 import { deliverNow } from "../email/deliver";
+import { notifyRsvp } from "../push/send";
 import { getSite } from "../site";
 import { adminClient, anonClient } from "../supabase/server";
 import { deriveToken } from "../tokens";
@@ -42,6 +44,8 @@ export async function submitHouseholdRsvp(slug: string, _prev: FormState, form: 
   if (r.error === "invalid") return { error: "Your invitation link has expired or was revoked. Please contact the couple." };
   if (r.error === "deadline") return { error: `The RSVP deadline for the ${r.event} has passed. Please contact the couple to make changes.` };
   if (r.error) return { error: "Please choose attending or not attending for at least one person." };
+  const householdId = site.guest.household.id;
+  after(() => notifyRsvp(householdId, responses).catch((e) => console.warn(`push: ${(e as Error).message}`)));
   revalidatePath(`/w/${slug}`, "layout");
   return { ok: true, message: "Thank you, your RSVP has been saved. You can come back to this page any time before the deadline to make changes." };
 }

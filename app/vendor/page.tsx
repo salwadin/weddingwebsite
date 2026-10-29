@@ -19,6 +19,7 @@ import { LISTING_TIERS } from "@/lib/plans";
 import type { ListingTier } from "@/lib/types";
 import { Badge, Button, Card, CardHeader, Checkbox, Field, Input, Logo, Select, Stat, Textarea } from "@/components/ui";
 import { DemoBar } from "@/components/demo-bar";
+import { PushPrompt } from "@/components/push-prompt";
 import { DeleteAccountCard } from "@/components/delete-account-card";
 import { DEMO_VENDOR_EMAIL } from "@/lib/seed";
 
@@ -71,6 +72,7 @@ export default async function VendorPortal({ searchParams }: { searchParams: Pro
       </header>
 
       <main className="mx-auto max-w-6xl px-6 pt-8">
+        {app && <PushPrompt title="Hear about new inquiries right away" text="Get a notification on this phone whenever a couple contacts you." />}
         {sp.welcome && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-3 text-sm text-[#3f5238]">Welcome! Add photos and a description below, then publish your listing.</p>}
         {sp.saved && <p className="mb-4 rounded-xl bg-sage-soft px-4 py-3 text-sm text-[#3f5238]">Listing saved.</p>}
         <div className="flex flex-wrap items-end justify-between gap-3">

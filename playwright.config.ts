@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 import { RESEND_MOCK_URL } from "./tests/resend-mock";
 import { TWILIO_MOCK_URL, TWILIO_TEST } from "./tests/twilio-mock";
+import { APNS_MOCK_URL, APNS_TEST_KEY } from "./tests/apns-mock";
 
 // Same settings as the app (Supabase URL/keys, INVITE_TOKEN_SECRET, QUBOOL_DEMO=on).
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
@@ -43,6 +44,8 @@ export default defineConfig({
       // Texts go to the mock Twilio API in tests/twilio-mock.ts; tests/sms.spec.ts texts through the demo wedding.
       TWILIO_ACCOUNT_SID: TWILIO_TEST.sid, TWILIO_AUTH_TOKEN: TWILIO_TEST.token, TWILIO_FROM: TWILIO_TEST.from, TWILIO_API_URL: TWILIO_MOCK_URL,
       QUBOOL_SMS_DEMO_ROWS: "send",
+      // Push notifications go to the mock APNs in tests/apns-mock.ts; tests/push.spec.ts RSVPs in the demo wedding.
+      APNS_URL: APNS_MOCK_URL, APNS_KEY: APNS_TEST_KEY, APNS_KEY_ID: "QUBOOLTEST", APNS_TEAM_ID: "QUBOOLTEAM", QUBOOL_PUSH_DEMO: "send",
       QUBOOL_DEMO_UPLOADS: "on", // tests/invitation.spec.ts and tests/website.spec.ts upload images to the demo wedding
     },
   },

@@ -4,6 +4,7 @@ import { isDemoEmail } from "../demo";
 import { isStaffEmail } from "../staff";
 import { redirect } from "next/navigation";
 import { homeFor, siteUrl } from "../auth";
+import { forgetDevice } from "../push/device";
 import { serverClient } from "../supabase/server";
 import { INVITE_ONLY, mayJoin } from "../programs";
 import type { FormState } from "./site";
@@ -65,6 +66,7 @@ export async function updatePassword(_prev: FormState, form: FormData): Promise<
 
 export async function logout() {
   const sb = await serverClient();
+  await forgetDevice(sb); // no more notifications to this phone
   await sb.auth.signOut();
   redirect("/");
 }
