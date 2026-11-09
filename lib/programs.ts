@@ -13,18 +13,24 @@ export const openSignup = () => process.env.QUBOOL_OPEN_SIGNUP === "on";
 /**
  * May this email create an account (or a wedding) while Qubool is invite-only?
  * Couples and planners: a beta application staff have invited (or that already joined).
+ * Anyone a couple invited to help plan their wedding (a pending collaborator invite).
  * Vendors: an approved Founding Vendor application. Staff always may.
  */
 export async function mayJoin(email: string, kind: "couple" | "vendor") {
   if (openSignup() || isStaffEmail(email)) return true;
   const admin = adminClient();
-  const { count } = kind === "vendor"
-    ? await admin.from("vendor_applications").select("id", { count: "exact", head: true }).eq("email", email).eq("status", "approved")
-    : await admin.from("beta_applications").select("id", { count: "exact", head: true }).eq("email", email).in("status", ["invited", "joined"]);
-  return (count ?? 0) > 0;
+  if (kind === "vendor") {
+    const { count } = await admin.from("vendor_applications").select("id", { count: "exact", head: true }).eq("email", email).eq("status", "approved");
+    return (count ?? 0) > 0;
+  }
+  const [{ count: beta }, { count: invites }] = await Promise.all([
+    admin.from("beta_applications").select("id", { count: "exact", head: true }).eq("email", email).in("status", ["invited", "joined"]),
+    admin.from("collaborator_invites").select("id", { count: "exact", head: true }).eq("email", email),
+  ]);
+  return (beta ?? 0) + (invites ?? 0) > 0;
 }
 
-export const INVITE_ONLY = "Qubool is invite-only during the beta. Use the email you applied with, or request early access at qubool.app/beta and we'll email you when it's your turn.";
+export const INVITE_ONLY = "Qubool is invite-only during the beta. Use the email you applied with, or the email a couple invited you with. Not invited yet? Request early access at qubool.app/beta.";
 export const VENDORS_INVITE_ONLY = "Vendor accounts are open to approved Founding Vendors during the beta. Use the email you applied with, or apply at qubool.app/founding-vendors.";
 
 /** How many of the 50 founding spots are still open (shown on the public page). */

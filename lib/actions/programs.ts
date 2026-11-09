@@ -124,3 +124,22 @@ export async function reviewBetaApplication(decision: string, form: FormData) {
   }
   revalidatePath("/admin");
 }
+
+/**
+ * Staff let someone in directly (no application needed): their email goes on the beta list as
+ * invited, and they get the invitation email. Someone already on the list is invited the same way.
+ */
+export async function addBetaMember(form: FormData) {
+  const staff = await requireStaff();
+  const name = str(form, "name", 100), email = str(form, "email", 200).toLowerCase();
+  const kind = str(form, "kind") === "planner" ? "planner" : "couple";
+  if (!isEmail(email)) return;
+  const admin = adminClient();
+  const { data: existing } = await admin.from("beta_applications").select("id,status").eq("email", email).maybeSingle();
+  const now = new Date().toISOString();
+  if (existing?.status === "joined") { revalidatePath("/admin"); return; }
+  if (existing) await admin.from("beta_applications").update({ status: "invited", invited_at: now, reviewed_by: staff.email }).eq("id", existing.id);
+  else await admin.from("beta_applications").insert({ kind, name: name || email.split("@")[0], email, status: "invited", invited_at: now, reviewed_by: staff.email, staff_notes: "Added by staff" });
+  await queueEmail("beta_invite", email, "You're invited to the Qubool beta");
+  revalidatePath("/admin");
+}
