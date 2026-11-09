@@ -9,6 +9,7 @@ import { requireStaff } from "@/lib/staff";
 import { adminClient } from "@/lib/supabase/server";
 import { Badge, Card, Input, Logo, Select, Stat, Textarea } from "@/components/ui";
 import { PendingButton } from "@/components/pending-button";
+import { WeddingsTab } from "./weddings";
 
 export const metadata = { title: "Qubool admin", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ const linkOf = (u: string) => (/^https?:\/\//.test(u) ? u : `https://${u}`);
 export default async function Admin({ searchParams }: { searchParams: Promise<SP> }) {
   const staff = await requireStaff();
   const sp = await searchParams;
-  const tab = sp.tab === "beta" ? "beta" : "vendors";
+  const tab = sp.tab === "beta" ? "beta" : sp.tab === "weddings" ? "weddings" : "vendors";
   const admin = adminClient();
   const [{ data: vendors }, { data: beta }] = await Promise.all([
     admin.from("vendor_applications").select("*").order("created_at", { ascending: false }).limit(1000),
@@ -37,7 +38,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<SP
   const status = search ? "all" : sp.status ?? (tab === "vendors" ? "pending" : "new");
   const matches = (x: Record<string, unknown>) => !search || ["email", "name", "partner_name", "company", "business_name", "contact_name"]
     .some((k) => String(x[k] ?? "").toLowerCase().includes(search));
-  const rows = (tab === "vendors" ? v : b).filter((x) => (status === "all" || x.status === status) && matches(x));
+  const rows = tab === "weddings" ? [] : (tab === "vendors" ? v : b).filter((x) => (status === "all" || x.status === status) && matches(x));
   const counts = (list: { status: string }[], s: string) => list.filter((x) => x.status === s).length;
   const q = (p: SP) => `/admin?${new URLSearchParams({ tab, ...p } as Record<string, string>)}`;
 
@@ -54,7 +55,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<SP
       </header>
 
       <main className="mx-auto max-w-6xl px-6 pt-8">
-        <h1 className="font-serif text-4xl">Applications</h1>
+        <h1 className="font-serif text-4xl">Admin</h1>
         <Card className="mt-5 grid grid-cols-2 gap-6 p-5 md:grid-cols-4">
           <Stat label="Vendor applications" value={v.length} sub={`${counts(v, "pending")} waiting for review`} tone="gold" />
           <Stat label="Founding spots" value={`${founding}/${FOUNDING_SPOTS}`} sub={`${FOUNDING_SPOTS - founding} left`} tone="sage" />
@@ -62,7 +63,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<SP
           <Stat label="Beta members" value={counts(b, "joined")} sub={`${counts(b, "invited")} invited, not joined yet`} tone="sage" />
         </Card>
 
-        <Card className="mt-5 p-5">
+        {tab === "beta" && <Card className="mt-5 p-5">
           <p className="font-serif text-xl">Let someone in</p>
           <p className="text-sm text-muted">No application needed. They&apos;re added to the beta as invited and get the invitation email. People a couple invites to help plan their wedding can already sign up.</p>
           <form action={addBetaMember} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1.3fr_auto_auto]">
@@ -71,31 +72,32 @@ export default async function Admin({ searchParams }: { searchParams: Promise<SP
             <Select name="kind" aria-label="Type" defaultValue="couple"><option value="couple">Couple</option><option value="planner">Planner</option></Select>
             <PendingButton pendingLabel="Inviting…">Invite</PendingButton>
           </form>
-        </Card>
+        </Card>}
 
         <form action="/admin" className="mt-5 flex gap-2">
           <input type="hidden" name="tab" value={tab} />
-          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Search by name or email" aria-label="Search applications" className="max-w-sm" />
+          <Input name="q" defaultValue={sp.q ?? ""} placeholder={tab === "weddings" ? "Search by couple, name or email" : "Search by name or email"} aria-label="Search" className="max-w-sm" />
           <button className="rounded-full border border-line bg-white px-4 text-sm hover:bg-cream">Search</button>
           {search && <Link href={`/admin?tab=${tab}`} className="self-center text-sm text-muted underline">Clear</Link>}
         </form>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-1 rounded-full bg-cream p-1 text-sm">
-            {(["vendors", "beta"] as const).map((t) => (
-              <Link key={t} href={`/admin?tab=${t}`} className={cn("rounded-full px-4 py-1.5", tab === t ? "bg-white shadow-sm" : "text-muted")}>{t === "vendors" ? "Founding vendors" : "Beta"}</Link>
+            {(["vendors", "beta", "weddings"] as const).map((t) => (
+              <Link key={t} href={`/admin?tab=${t}`} className={cn("rounded-full px-4 py-1.5", tab === t ? "bg-white shadow-sm" : "text-muted")}>{t === "vendors" ? "Founding vendors" : t === "beta" ? "Beta" : "Weddings & people"}</Link>
             ))}
           </div>
-          <div className="flex flex-wrap gap-1.5 text-sm">
+          {tab !== "weddings" && <div className="flex flex-wrap gap-1.5 text-sm">
             {[...(tab === "vendors" ? VENDOR_STATUS : BETA_STATUS), "all"].map((s) => (
               <Link key={s} href={q({ status: s })} className={cn("rounded-full border px-3 py-1 capitalize", status === s ? "border-ink bg-ink text-ivory" : "border-line bg-white hover:bg-cream")}>
                 {s} {s !== "all" && <span className="opacity-60">{counts(tab === "vendors" ? v : b, s)}</span>}
               </Link>
             ))}
-          </div>
+          </div>}
         </div>
 
-        <div className="mt-4 space-y-4">
+        {tab === "weddings" && <div className="mt-4"><WeddingsTab search={search} /></div>}
+        {tab !== "weddings" && <div className="mt-4 space-y-4">
           {rows.length === 0 && <p className="rounded-2xl border border-dashed border-line px-6 py-10 text-center text-sm text-muted">Nothing here.</p>}
           {tab === "vendors" && rows.map((a) => (
             <Card key={a.id} className="p-5">
@@ -171,7 +173,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<SP
               {a.invited_at && <p className="mt-2 text-[11px] text-muted">Invited {shortDate(String(a.invited_at).slice(0, 10))}{a.joined_at ? ` · joined ${shortDate(String(a.joined_at).slice(0, 10))}` : ""}</p>}
             </Card>
           ))}
-        </div>
+        </div>}
       </main>
     </div>
   );

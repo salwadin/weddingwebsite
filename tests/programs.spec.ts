@@ -77,7 +77,7 @@ test("only staff can open /admin", async ({ page, browser }) => {
 
   await loginAs(page, "planner@example.com");
   await expect(page).toHaveURL(/\/admin/);
-  await expect(page.getByRole("heading", { name: "Applications" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Admin" })).toBeVisible();
 });
 
 test("staff approve a founding vendor: numbered, emailed, and the listing is Featured free for a year", async ({ page }) => {
