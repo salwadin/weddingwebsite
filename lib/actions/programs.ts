@@ -5,6 +5,7 @@ import { deliverNow } from "../email/deliver";
 import { CATEGORIES, TRADITION_LABELS } from "../marketplace";
 import { applyFoundingPerks } from "../programs";
 import { requireStaff } from "../staff";
+import { staffAddPerson } from "./staff-weddings";
 import { adminClient } from "../supabase/server";
 import type { FormState } from "./site";
 import { BETA_EVENTS, BETA_FEATURES } from "../programs-shared";
@@ -126,13 +127,17 @@ export async function reviewBetaApplication(decision: string, form: FormData) {
 }
 
 /**
- * Staff let someone in directly (no application needed): their email goes on the beta list as
- * invited, and they get the invitation email. Someone already on the list is invited the same way.
+ * Staff let someone in directly (no application needed). With a wedding chosen, they're added
+ * to that wedding with a role; otherwise their email goes on the beta list as invited (a new
+ * couple or planner) and they get the invitation email.
  */
 export async function addBetaMember(form: FormData) {
   const staff = await requireStaff();
+  const join = str(form, "join", 40) || "couple";
+  // A wedding was chosen: add them to it (they land in it when they sign up).
+  if (join !== "couple" && join !== "planner") { form.set("weddingId", join); return staffAddPerson(form); }
   const name = str(form, "name", 100), email = str(form, "email", 200).toLowerCase();
-  const kind = str(form, "kind") === "planner" ? "planner" : "couple";
+  const kind = join;
   if (!isEmail(email)) return;
   const admin = adminClient();
   const { data: existing } = await admin.from("beta_applications").select("id,status").eq("email", email).maybeSingle();
