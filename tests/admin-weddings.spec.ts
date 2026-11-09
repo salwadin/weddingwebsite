@@ -40,3 +40,19 @@ test("staff change someone's role on a wedding", async ({ page }) => {
   await row.getByRole("button", { name: "Save" }).click();
   await expect.poll(async () => (await admin.from("wedding_collaborators").select("role").eq("wedding_id", DEMO_WEDDING_ID).eq("relationship", "Bride's mother").single()).data?.role).toBe("viewer");
 });
+
+test("'Let someone in' with a wedding chosen adds them to that wedding", async ({ page }) => {
+  const guestEmail = `brother.${Date.now()}@people.qubool.test`;
+  await loginAs(page, "planner@example.com");
+  await page.goto("/admin?tab=beta");
+  const form = page.locator("div.rounded-2xl", { hasText: "Let someone in" });
+  await form.getByLabel("Name").fill("Bilal");
+  await form.getByLabel("Email").fill(guestEmail);
+  await form.getByLabel("Wedding").selectOption({ label: "Ayesha & Omar" });
+  await form.getByLabel("Role on the wedding").selectOption("guest_manager");
+  await form.getByRole("button", { name: "Invite", exact: true }).click();
+  await expect.poll(async () => (await admin.from("collaborator_invites").select("role,wedding_id").eq("email", guestEmail).maybeSingle()).data)
+    .toEqual({ role: "guest_manager", wedding_id: DEMO_WEDDING_ID });
+  const { count } = await admin.from("beta_applications").select("id", { count: "exact", head: true }).eq("email", guestEmail);
+  expect(count).toBe(0);
+});

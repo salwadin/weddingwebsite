@@ -5,6 +5,7 @@ import { addBetaMember, reviewBetaApplication, reviewVendorApplication } from "@
 import { cn, shortDate } from "@/lib/format";
 import { TRADITION_LABELS } from "@/lib/marketplace";
 import { FOUNDING_SPOTS } from "@/lib/programs";
+import { ROLE_LABELS } from "@/lib/access";
 import { requireStaff } from "@/lib/staff";
 import { adminClient } from "@/lib/supabase/server";
 import { Badge, Card, Input, Logo, Select, Stat, Textarea } from "@/components/ui";
@@ -27,9 +28,10 @@ export default async function Admin({ searchParams }: { searchParams: Promise<SP
   const sp = await searchParams;
   const tab = sp.tab === "beta" ? "beta" : sp.tab === "weddings" ? "weddings" : "vendors";
   const admin = adminClient();
-  const [{ data: vendors }, { data: beta }] = await Promise.all([
+  const [{ data: vendors }, { data: beta }, { data: weddings }] = await Promise.all([
     admin.from("vendor_applications").select("*").order("created_at", { ascending: false }).limit(1000),
     admin.from("beta_applications").select("*").order("created_at", { ascending: false }).limit(2000),
+    admin.from("weddings").select("id,partner1,partner2").order("created_at", { ascending: false }).limit(500),
   ]);
   const v = vendors ?? [], b = beta ?? [];
   const founding = v.filter((x) => x.founding_number).length;
@@ -65,13 +67,25 @@ export default async function Admin({ searchParams }: { searchParams: Promise<SP
 
         {tab === "beta" && <Card className="mt-5 p-5">
           <p className="font-serif text-xl">Let someone in</p>
-          <p className="text-sm text-muted">No application needed. They&apos;re added to the beta as invited and get the invitation email. People a couple invites to help plan their wedding can already sign up.</p>
-          <form action={addBetaMember} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1.3fr_auto_auto]">
+          <p className="text-sm text-muted">No application needed. Choose a wedding to add them to it (they land in it when they sign up), or invite them to start their own.</p>
+          <form action={addBetaMember} className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1.2fr_1.4fr_1fr_auto]">
             <Input name="name" placeholder="Name" aria-label="Name" />
             <Input name="email" type="email" required placeholder="Email" aria-label="Email" />
-            <Select name="kind" aria-label="Type" defaultValue="couple"><option value="couple">Couple</option><option value="planner">Planner</option></Select>
+            <Select name="join" aria-label="Wedding" defaultValue="couple">
+              <optgroup label="Their own wedding">
+                <option value="couple">New couple</option>
+                <option value="planner">New planner</option>
+              </optgroup>
+              {(weddings ?? []).length > 0 && <optgroup label="Help plan a wedding">
+                {(weddings ?? []).map((w) => <option key={w.id} value={w.id}>{w.partner1} &amp; {w.partner2}</option>)}
+              </optgroup>}
+            </Select>
+            <Select name="role" aria-label="Role on the wedding" defaultValue="admin">
+              {Object.entries(ROLE_LABELS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+            </Select>
             <PendingButton pendingLabel="Inviting…">Invite</PendingButton>
           </form>
+          <p className="mt-2 text-xs text-muted">The role only applies when you pick a wedding.</p>
         </Card>}
 
         <form action="/admin" className="mt-5 flex gap-2">
