@@ -28,7 +28,7 @@ export async function WeddingsTab({ search }: { search: string }) {
   ]);
   const userIds = [...new Set((collabs ?? []).map((c) => c.user_id as string))];
   const { data: profiles } = userIds.length ? await admin.from("profiles").select("id,name,email").in("id", userIds) : { data: [] };
-  const person = new Map((profiles ?? []).map((p) => [p.id as string, p as { name: string; email: string }]));
+  const person = new Map((profiles ?? []).map((p) => [p.id as string, { name: p.name as string, email: p.email as string }]));
 
   const list = (weddings ?? []).map((w) => ({
     ...w,
