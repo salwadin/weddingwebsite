@@ -1,19 +1,19 @@
 import Link from "next/link";
 import { ExternalLink, LogOut } from "lucide-react";
 import { logout } from "@/lib/actions/auth";
-import { reviewBetaApplication, reviewVendorApplication } from "@/lib/actions/programs";
+import { addBetaMember, reviewBetaApplication, reviewVendorApplication } from "@/lib/actions/programs";
 import { cn, shortDate } from "@/lib/format";
 import { TRADITION_LABELS } from "@/lib/marketplace";
 import { FOUNDING_SPOTS } from "@/lib/programs";
 import { requireStaff } from "@/lib/staff";
 import { adminClient } from "@/lib/supabase/server";
-import { Badge, Card, Logo, Stat, Textarea } from "@/components/ui";
+import { Badge, Card, Input, Logo, Select, Stat, Textarea } from "@/components/ui";
 import { PendingButton } from "@/components/pending-button";
 
 export const metadata = { title: "Qubool admin", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
-type SP = { tab?: string; status?: string };
+type SP = { tab?: string; status?: string; q?: string };
 
 const VENDOR_STATUS = ["pending", "approved", "waitlisted", "declined"] as const;
 const BETA_STATUS = ["new", "invited", "joined", "declined"] as const;
@@ -32,8 +32,12 @@ export default async function Admin({ searchParams }: { searchParams: Promise<SP
   ]);
   const v = vendors ?? [], b = beta ?? [];
   const founding = v.filter((x) => x.founding_number).length;
-  const status = sp.status ?? (tab === "vendors" ? "pending" : "new");
-  const rows = (tab === "vendors" ? v : b).filter((x) => status === "all" || x.status === status);
+  const search = (sp.q ?? "").trim().toLowerCase();
+  // A search looks across every status.
+  const status = search ? "all" : sp.status ?? (tab === "vendors" ? "pending" : "new");
+  const matches = (x: Record<string, unknown>) => !search || ["email", "name", "partner_name", "company", "business_name", "contact_name"]
+    .some((k) => String(x[k] ?? "").toLowerCase().includes(search));
+  const rows = (tab === "vendors" ? v : b).filter((x) => (status === "all" || x.status === status) && matches(x));
   const counts = (list: { status: string }[], s: string) => list.filter((x) => x.status === s).length;
   const q = (p: SP) => `/admin?${new URLSearchParams({ tab, ...p } as Record<string, string>)}`;
 
@@ -58,7 +62,25 @@ export default async function Admin({ searchParams }: { searchParams: Promise<SP
           <Stat label="Beta members" value={counts(b, "joined")} sub={`${counts(b, "invited")} invited, not joined yet`} tone="sage" />
         </Card>
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <Card className="mt-5 p-5">
+          <p className="font-serif text-xl">Let someone in</p>
+          <p className="text-sm text-muted">No application needed. They&apos;re added to the beta as invited and get the invitation email. People a couple invites to help plan their wedding can already sign up.</p>
+          <form action={addBetaMember} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1.3fr_auto_auto]">
+            <Input name="name" placeholder="Name" aria-label="Name" />
+            <Input name="email" type="email" required placeholder="Email" aria-label="Email" />
+            <Select name="kind" aria-label="Type" defaultValue="couple"><option value="couple">Couple</option><option value="planner">Planner</option></Select>
+            <PendingButton pendingLabel="Inviting…">Invite</PendingButton>
+          </form>
+        </Card>
+
+        <form action="/admin" className="mt-5 flex gap-2">
+          <input type="hidden" name="tab" value={tab} />
+          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Search by name or email" aria-label="Search applications" className="max-w-sm" />
+          <button className="rounded-full border border-line bg-white px-4 text-sm hover:bg-cream">Search</button>
+          {search && <Link href={`/admin?tab=${tab}`} className="self-center text-sm text-muted underline">Clear</Link>}
+        </form>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-1 rounded-full bg-cream p-1 text-sm">
             {(["vendors", "beta"] as const).map((t) => (
               <Link key={t} href={`/admin?tab=${t}`} className={cn("rounded-full px-4 py-1.5", tab === t ? "bg-white shadow-sm" : "text-muted")}>{t === "vendors" ? "Founding vendors" : "Beta"}</Link>

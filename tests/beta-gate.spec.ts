@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { adminClient, DEMO_PASSWORD, loginAs } from "./helpers";
+import { DEMO_WEDDING_ID } from "../lib/seed";
 
 // Qubool is invite-only during the beta (until QUBOOL_OPEN_SIGNUP=on): couples and
 // planners need an invited beta application, vendors an approved Founding Vendor one.
@@ -9,6 +10,7 @@ const users: string[] = [];
 
 test.afterAll(async () => {
   await admin.from("beta_applications").delete().like("email", "%@gate.qubool.test");
+  await admin.from("collaborator_invites").delete().like("email", "%@gate.qubool.test");
   const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
   for (const u of data.users.filter((x) => x.email?.endsWith("@gate.qubool.test"))) await admin.auth.admin.deleteUser(u.id);
   for (const id of users) await admin.auth.admin.deleteUser(id).catch(() => {});
@@ -49,6 +51,14 @@ test("someone who isn't invited can't create an account", async ({ page }) => {
 test("an invited beta applicant can create their account", async ({ page }) => {
   const email = `invited.${stamp()}@gate.qubool.test`;
   await admin.from("beta_applications").insert({ kind: "planner", name: "Sam Rivera", email, status: "invited", invited_at: new Date().toISOString() });
+  await signUp(page, email);
+  await expect(page.getByText(/sent a confirmation link/)).toBeVisible();
+  expect(await accountExists(email)).toBe(true);
+});
+
+test("someone a couple invited to help plan can create their account", async ({ page }) => {
+  const email = `family.${stamp()}@gate.qubool.test`;
+  await admin.from("collaborator_invites").insert({ wedding_id: DEMO_WEDDING_ID, email, name: "Omar", role: "viewer" });
   await signUp(page, email);
   await expect(page.getByText(/sent a confirmation link/)).toBeVisible();
   expect(await accountExists(email)).toBe(true);
