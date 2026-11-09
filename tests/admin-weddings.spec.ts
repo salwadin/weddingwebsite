@@ -48,7 +48,7 @@ test("'Let someone in' with a wedding chosen adds them to that wedding", async (
   const form = page.locator("div.rounded-2xl", { hasText: "Let someone in" });
   await form.getByLabel("Name").fill("Bilal");
   await form.getByLabel("Email").fill(guestEmail);
-  await form.getByLabel("Wedding").selectOption({ label: "Ayesha & Omar" });
+  await form.getByLabel("Wedding", { exact: true }).selectOption({ label: "Ayesha & Omar" });
   await form.getByLabel("Role on the wedding").selectOption("guest_manager");
   await form.getByRole("button", { name: "Invite", exact: true }).click();
   await expect.poll(async () => (await admin.from("collaborator_invites").select("role,wedding_id").eq("email", guestEmail).maybeSingle()).data)
