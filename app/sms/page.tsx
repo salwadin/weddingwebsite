@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function SmsTerms() {
   return (
-    <LegalPage title="Text messages from Qubool" updated="October 23, 2026"
+    <LegalPage title="Text messages from Qubool" updated="November 12, 2026"
       intro={<p>Couples who plan their wedding on Qubool can text their guests invitations, save-the-dates and RSVP reminders. This page explains how those texts work and how to stop them.</p>}>
       <Section title="What the texts are">
         <p>Texts come from Qubool&apos;s number on behalf of a couple you know, about their wedding. Each one names the couple and links to your personal invitation page, for example:</p>
@@ -18,13 +18,25 @@ export default function SmsTerms() {
       </Section>
 
       <Section title="How guests agree to texts">
-        <p>A couple adds a guest&apos;s mobile number to their guest list only after the guest has agreed to get texts about the wedding, typically when the couple asks for their contact details. Before Qubool sends any text, the couple must confirm it by ticking this box in their dashboard:</p>
+        <p>A couple adds a guest&apos;s mobile number to their guest list only after the guest has agreed to get texts about the wedding, typically when the couple asks for their contact details. Before Qubool sends any text, the couple must confirm it by checking this box in their dashboard:</p>
         <div className="flex items-start gap-2 rounded-2xl border border-line bg-white p-4 text-sm">
           <span aria-hidden className="mt-0.5 inline-block h-4 w-4 shrink-0 rounded border border-ink bg-ink" />
           <span>If texting: these guests agreed to get texts from us</span>
         </div>
         <p>Agreeing to texts is never a condition of attending, RSVPing, or buying anything.</p>
       </Section>
+
+      <section id="consent-script" className="scroll-mt-6">
+        <h2 className="font-serif text-2xl">Verbal consent script</h2>
+        <div className="mt-2 space-y-3">
+          <p>Couples (or family helping them) ask each guest in person or by phone when they collect the guest&apos;s mobile number, using these words:</p>
+          <blockquote className="space-y-3 rounded-2xl border border-line bg-white p-4 text-[15px] leading-relaxed">
+            <p><b>Couple:</b> &ldquo;We&apos;re planning our wedding on Qubool. Can we text you at this number about our wedding? That&apos;s your invitation, a save-the-date, and RSVP reminders, usually one to five texts from Qubool. Message and data rates may apply. You can reply STOP at any time to stop, or HELP for help.&rdquo;</p>
+            <p><b>Guest:</b> &ldquo;Yes.&rdquo;</p>
+          </blockquote>
+          <p>Only guests who say yes have their number added for texts. If a guest says no, the couple leaves the number out and the guest gets their invitation by email or link instead. Before any text is sent, the couple confirms in their dashboard that every guest being texted agreed (the checkbox above).</p>
+        </div>
+      </section>
 
       <Section title="How often">
         <p>Message frequency varies. Most guests receive between one and five texts per wedding: an invitation or save-the-date, and a reminder if they haven&apos;t replied. Message and data rates may apply.</p>
