@@ -1,0 +1,5 @@
+{
+  "Simulator Target Bundle": "app.qubool",
+  "aps": { "alert": { "title": "Dr. Sana Malik & Mr. Faisal Malik RSVP'd", "body": "2 attending" }, "sound": "default" },
+  "url": "/dashboard/rsvps"
+}

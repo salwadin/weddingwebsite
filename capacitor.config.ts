@@ -25,6 +25,8 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: { launchShowDuration: 2500, launchAutoHide: true, backgroundColor: "#fbf8f2", showSpinner: false },
     StatusBar: { style: "LIGHT", backgroundColor: "#fbf8f2", overlaysWebView: false },
+    // Show notifications even while the app is open (lib/push).
+    PushNotifications: { presentationOptions: ["banner", "list", "sound", "alert"] },
   },
 };
 

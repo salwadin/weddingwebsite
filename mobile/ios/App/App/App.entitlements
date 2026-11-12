@@ -8,5 +8,9 @@
 	<array>
 		<string>applinks:www.qubool.app</string>
 	</array>
+	<!-- Push notifications (lib/push/apns.ts). Xcode switches this to "production" when it
+	     signs an App Store or TestFlight build. -->
+	<key>aps-environment</key>
+	<string>development</string>
 </dict>
 </plist>

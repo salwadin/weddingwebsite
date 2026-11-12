@@ -3,9 +3,11 @@
 import { isDemoEmail, isDemoWedding } from "../demo";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { currentUser, organizerContext, siteUrl } from "../auth";
 import { audit, mutate, uid } from "../db";
 import { deliverNow } from "../email/deliver";
+import { notifyInquiry } from "../push/send";
 import { requireOrg } from "../dashboard";
 import { syncSubscription } from "../payments";
 import { LISTING_TIERS } from "../plans";
@@ -36,6 +38,7 @@ export async function sendInquiry(listingId: string, _prev: FormState, form: For
   if (r.error === "limit") return { error: "You've already contacted this vendor today. They'll be in touch soon." };
   if (r.error) return { error: "Please check your details and try again." };
   await deliverNow({ kind: "inquiry" });
+  after(() => notifyInquiry(listingId, name, message).catch((e) => console.warn(`push: ${(e as Error).message}`)));
   const { data: l } = await anonClient().from("listings").select("name").eq("id", listingId).maybeSingle();
   return { ok: true, message: `Sent! ${l?.name ?? "The vendor"} usually replies within a couple of days, to ${email}.` };
 }
